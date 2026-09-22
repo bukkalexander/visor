@@ -1,0 +1,13 @@
+playlists:
+  - id: quiet-evening
+    name: Quiet evening
+    description: Calm songs for winding down.
+    song_ids:
+      - moonlight-sonata
+      - blinka-lilla-stjarna
+  - id: piano-starters
+    name: Piano starters
+    description: Two familiar classical piano pieces.
+    song_ids:
+      - rondo-alla-turca
+      - moonlight-sonata

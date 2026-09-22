@@ -1,6 +1,5 @@
 title: Visor
 command:
-- npm
-- start
+- ./run.sh
 port_env: PORT
 base_path_env: ORC_BASE_PATH
