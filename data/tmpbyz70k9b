@@ -1,6 +1,0 @@
-playlists:
-- id: test-list
-  name: Test list
-  description: ''
-  song_ids:
-  - moonlight-sonata
