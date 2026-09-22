@@ -28,7 +28,7 @@ We don't need user accounts, since this is a hobby self hosted project, for 2 pe
 
 ## Implementation notes
 
-- Implemented as a Vite/React/TypeScript single-page client served by FastAPI.
+- Implemented as a Vite/React/TypeScript single-page client in `frontend/`, served by FastAPI in `backend/`.
 - `data/songs.yaml` is validated against `data/songs.schema.yaml` on every catalogue fetch; errors are returned to and rendered by the client.
 - `data/playlists.yaml` is the shared file database for manually authored and UI-created playlists. API writes are atomic.
 - Searchable fields come from the schema. Structured search supports `=`, `~=`, `in`, `AND`, `OR`, quoted values, and grouped expressions.

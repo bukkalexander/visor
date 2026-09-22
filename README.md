@@ -2,6 +2,17 @@
 
 Visor is a concise, mobile-first library for Swedish and international songs. It uses a React/TypeScript/Vite client and a FastAPI service, with human-editable YAML as its database.
 
+## Repository layout
+
+```text
+frontend/        React, TypeScript, Vite, and frontend tests
+backend/         FastAPI, Python dependencies, and backend tests
+data/            Song schema, song catalogue, and playlists
+.orc/            Orc service contract
+run.sh           Production build and service entry point
+iteration*.md    Product specifications and implementation history
+```
+
 ## Data
 
 - [`data/songs.yaml`](data/songs.yaml) is the song catalogue.
@@ -21,31 +32,30 @@ universe ~= "classical" AND tags in ("piano", "calm")
 ## Development
 
 ```sh
-npm install
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+cd frontend && npm install && cd ..
+python3 -m venv backend/.venv
+backend/.venv/bin/pip install -r backend/requirements.txt
 ```
 
 Run the API after building the frontend:
 
 ```sh
-npm run build
-.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 5194
+(cd frontend && npm run build)
+backend/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 5194
 ```
 
 Or run Vite and FastAPI separately for frontend hot reload:
 
 ```sh
-.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
-npm run dev
+backend/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
+(cd frontend && npm run dev)
 ```
 
 Tests and production build:
 
 ```sh
-npm test
-.venv/bin/python -m unittest discover -v
-npm run build
+(cd frontend && npm test && npm run build)
+backend/.venv/bin/python -m unittest discover -s backend/tests -v
 ```
 
 ## Orc

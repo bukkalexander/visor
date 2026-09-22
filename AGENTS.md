@@ -24,3 +24,10 @@ Do not commit secrets, generated dependencies, copyrighted lyrics/scores/recordi
 - Treat authorship, composition, lyric writing, story universe, source work, performer, arrangement, language, themes, mood, age range, occasion, and available media as separate queryable metadata.
 - Keep media provenance explicit. Prefer links and user-owned uploads; do not invent attribution or embed copyrighted material.
 - Keep the app compatible with `PORT` and `ORC_BASE_PATH` as documented in `.orc/README.md`.
+
+## Repository layout
+
+- `frontend/` owns the Vite/React/TypeScript application, Node manifest, compiler configuration, and frontend tests.
+- `backend/` owns FastAPI, Python requirements, its virtual environment, and backend tests.
+- `data/` is the human-editable YAML database and schema. Do not place generated files there.
+- Keep generated dependencies and build output inside their owning component: `frontend/node_modules`, `frontend/dist`, and `backend/.venv`.

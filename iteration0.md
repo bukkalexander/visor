@@ -1,5 +1,7 @@
 # Iteration 0 — mobile catalogue prototype
 
+> Historical specification. Iteration 1 replaced the prototype architecture; use the current commands in `README.md`.
+
 ## Goal
 
 Prove that Visor works within Orc and establish a useful information architecture for a Swedish children's-song library.

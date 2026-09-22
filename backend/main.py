@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -10,7 +9,7 @@ from .store import CatalogError, delete_playlist, load_catalog, load_playlists, 
 
 app = FastAPI(title="Visor API", docs_url="/api/docs", openapi_url="/api/openapi.json")
 ROOT = Path(__file__).resolve().parent.parent
-DIST = ROOT / "dist"
+DIST = ROOT / "frontend" / "dist"
 
 
 class PlaylistPayload(BaseModel):
