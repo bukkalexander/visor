@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8eddb" />
+    <meta name="description" content="Visor – hitta, ordna och spela svenska barnvisor." />
+    <title>Visor · Sångskåpet</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Visor, startsida"><span class="brand-mark">V</span><span>Visor</span></a>
+      <button class="playlist-button" id="playlist-toggle" aria-controls="playlist" aria-expanded="false">Spellista <span id="playlist-count">0</span></button>
+    </header>
+    <main id="top">
+      <section class="hero">
+        <p class="eyebrow">Det lilla sångskåpet</p>
+        <h1>Vad vill ni sjunga<br /><em>just nu?</em></h1>
+        <p class="lede">Hitta visor efter berättelse, stämning, upphovsperson eller vad som råkar passa stunden.</p>
+        <label class="search"><span aria-hidden="true">⌕</span><span class="sr-only">Sök visor</span><input id="search" type="search" placeholder="Sök titel, Pippi, Astrid…" autocomplete="off" /></label>
+      </section>
+
+      <section class="filter-section" aria-labelledby="explore-title">
+        <div class="section-heading"><div><p class="eyebrow">Snabbval</p><h2 id="explore-title">Bläddra i skåpet</h2></div><button class="text-button" id="clear-filters">Rensa</button></div>
+        <div class="chips" id="chips" aria-label="Snabbfilter"></div>
+        <details class="query-box">
+          <summary>Avancerad sökning <span>för den nyfikna</span></summary>
+          <div class="query-content">
+            <label for="query">Skriv en fråga</label>
+            <div class="query-row"><input id="query" spellcheck="false" placeholder='universe:Pippi AND mood:lekfull' /><button id="run-query">Sök</button></div>
+            <p id="query-help">Fält: <code>author</code>, <code>composer</code>, <code>universe</code>, <code>performer</code>, <code>theme</code>, <code>mood</code>, <code>media</code>. Kombinera med <code>AND</code>.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="catalogue" aria-labelledby="catalogue-title">
+        <div class="section-heading"><div><p class="eyebrow" id="result-count"></p><h2 id="catalogue-title">Visor att upptäcka</h2></div></div>
+        <div class="song-grid" id="song-grid"></div>
+        <div class="empty" id="empty" hidden><span>♫</span><h3>Inga visor hittades</h3><p>Prova ett annat ord eller rensa filtren.</p></div>
+      </section>
+    </main>
+
+    <dialog id="song-dialog"><div id="song-detail"></div></dialog>
+    <aside class="playlist" id="playlist" aria-label="Tillfällig spellista" aria-hidden="true">
+      <div class="playlist-head"><div><p class="eyebrow">Tillfällig</p><h2>Min spellista</h2></div><button class="icon-button" id="playlist-close" aria-label="Stäng spellistan">×</button></div>
+      <p class="playlist-note">Sparas bara på den här enheten.</p>
+      <ol id="playlist-items"></ol>
+      <div class="playlist-empty" id="playlist-empty">Lägg till visor från biblioteket så dyker de upp här.</div>
+      <div class="playlist-actions"><button id="play-all" class="primary">Spela tillgängliga</button><button id="clear-playlist" class="secondary">Töm</button></div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
