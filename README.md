@@ -19,7 +19,16 @@ iteration*.md    Product specifications and implementation history
 - [`data/songs.schema.yaml`](data/songs.schema.yaml) is its JSON Schema, written as YAML.
 - [`data/playlists.yaml`](data/playlists.yaml) stores both hand-authored and in-app playlists.
 
-The API reads and validates the song file for every catalogue request, so editing `songs.yaml` only requires a browser reload. Invalid YAML or schema violations are displayed in the app with paths and validation messages. Every song needs `id`, `title`, and `language`, plus at least one of `video` or `lyrics`.
+The API reads and validates the song file for every catalogue request, so editing `songs.yaml` only requires a browser reload. The file is a flat YAML list—each top-level `-` starts a song. Invalid YAML or schema violations are displayed in the app with paths and validation messages. Every song needs `id`, `title`, and `language`, plus at least one of `video` or `lyrics`.
+
+Lyrics may use Markdown. Chords use ChordPro's compact inline form and are rendered above the following word:
+
+```yaml
+lyrics: |
+  [C]Imse vimse spindel [G7]klättrar upp för [C]trå'n.
+```
+
+Selecting a rendered chord opens guitar and piano diagrams. Common open guitar shapes are built in; piano notes are derived for major, minor, seventh, and major-seventh chord names.
 
 The query language derives its available field names from the schema. Plain text performs a case-insensitive substring search across all fields. Structured queries support `=`, `~=`, `in`, `AND`, `OR`, and parentheses; values must be double quoted:
 
@@ -28,6 +37,8 @@ artist = "Wolfgang Amadeus Mozart"
 universe ~= "classical" AND tags in ("piano", "calm")
 (language = "Swedish" OR language = "Instrumental") AND title ~= "star"
 ```
+
+The home catalogue defaults to a compact table. Its menu contains faceted filters and sorting, while the view control retains an optional card layout. Selection mode can select individual songs or all visible filtered results and add them to a new or existing YAML-backed playlist.
 
 ## Development
 

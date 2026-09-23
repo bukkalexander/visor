@@ -1,73 +1,91 @@
-songs:
-  - id: blinka-lilla-stjarna
-    title: Blinka lilla stjärna
-    alternate_titles: [Twinkle, Twinkle, Little Star]
-    language: Swedish
-    description: |
-      A Swedish version of the familiar nursery song, set to a melody also used by Mozart for twelve piano variations.
+- id: imse-vimse-spindel
+  title: Imse vimse spindel
+  language: Swedish
+  lyrics: |
+    [C]Imse vimse spindel [G7]klättrar upp för [C]trå'n.
+    [C]Ner faller regnet, [G7]spolar spindeln [C]bort.
+    [C]Upp stiger solen, [G7]torkar bort allt [C]regn.
+    [C]Imse vimse spindel [G7]klättrar upp i [C]gen.
+  video: https://youtu.be/XO2EVGi1Rb4
 
-      A gentle choice for bedtime or a first melody on the piano.
-    lyrics: |
-      **Blinka, lilla stjärna där,**
+- id: ba-ba-vita-lamm
+  title: Bä bä vita lamm
+  language: Swedish
+  lyrics: |
+    [C]Bä, bä, vita lamm, [G7]har du någon [C]ull?
+    [C]Ja, ja, kära barn, [G7]jag har säcken [C]full.
+    [F]Helgdagsrock åt far och [C]söndagskjol åt mor,
+    [G7]och två par strumpor åt [C]lille, lille bror.
 
-      hur jag undrar vad du är.
+- id: blinka-lilla-stjarna
+  title: Blinka lilla stjärna
+  alternate_titles: [Twinkle, Twinkle, Little Star]
+  language: Swedish
+  description: |
+    A Swedish version of the familiar nursery song, set to a melody also used by Mozart for twelve piano variations.
 
-      Fjärran lockar du min syn,
+    A gentle choice for bedtime or a first melody on the piano.
+  lyrics: |
+    **Blinka, lilla stjärna där,**
 
-      lik en diamant i skyn.
-    artist: [Traditional]
-    author: [Traditional]
-    composer: [Traditional]
-    universe: [Traditional songs]
-    source: Swedish nursery song
-    tags: [bedtime, stars, calm, children]
-    rights: public-domain
+    hur jag undrar vad du är.
 
-  - id: rondo-alla-turca
-    title: Rondo alla Turca
-    language: Instrumental
-    description: |
-      The final movement of Mozart's Piano Sonata No. 11. Bright, quick and immediately recognisable.
-    video: https://www.youtube.com/watch?v=Rb0UmrCXxVA
-    artist: [Wolfgang Amadeus Mozart]
-    composer: [Wolfgang Amadeus Mozart]
-    universe: [Classical music]
-    source: Piano Sonata No. 11 in A major, K. 331
-    tags: [piano, energetic, classical]
-    year: 1783
-    rights: public-domain
+    Fjärran lockar du min syn,
 
-  - id: moonlight-sonata
-    title: Moonlight Sonata
-    alternate_titles: [Piano Sonata No. 14]
-    language: Instrumental
-    description: |
-      Beethoven's contemplative first movement, commonly known as the *Moonlight Sonata*.
-    video: https://www.youtube.com/watch?v=4Tr0otuiQuU
-    artist: [Ludwig van Beethoven]
-    composer: [Ludwig van Beethoven]
-    universe: [Classical music]
-    source: Piano Sonata No. 14, Op. 27 No. 2
-    tags: [piano, calm, night, classical]
-    year: 1801
-    rights: public-domain
+    lik en diamant i skyn.
+  artist: [Traditional]
+  author: [Traditional]
+  composer: [Traditional]
+  universe: [Traditional songs]
+  source: Swedish nursery song
+  tags: [bedtime, stars, calm, children]
+  rights: public-domain
 
-  - id: lilla-regnvisa
-    title: Lilla regnvisan
-    language: Swedish
-    description: |
-      An original miniature written for testing Visor's Markdown lyrics and metadata search.
-    lyrics: |
-      Regnet ritar ringar,
+- id: rondo-alla-turca
+  title: Rondo alla Turca
+  language: Instrumental
+  description: |
+    The final movement of Mozart's Piano Sonata No. 11. Bright, quick and immediately recognisable.
+  video: https://www.youtube.com/watch?v=Rb0UmrCXxVA
+  artist: [Wolfgang Amadeus Mozart]
+  composer: [Wolfgang Amadeus Mozart]
+  universe: [Classical music]
+  source: Piano Sonata No. 11 in A major, K. 331
+  tags: [piano, energetic, classical]
+  year: 1783
+  rights: public-domain
 
-      över tak och sten.
+- id: moonlight-sonata
+  title: Moonlight Sonata
+  alternate_titles: [Piano Sonata No. 14]
+  language: Instrumental
+  description: |
+    Beethoven's contemplative first movement, commonly known as the *Moonlight Sonata*.
+  video: https://www.youtube.com/watch?v=4Tr0otuiQuU
+  artist: [Ludwig van Beethoven]
+  composer: [Ludwig van Beethoven]
+  universe: [Classical music]
+  source: Piano Sonata No. 14, Op. 27 No. 2
+  tags: [piano, calm, night, classical]
+  year: 1801
+  rights: public-domain
 
-      När den sista droppen klingar,
+- id: lilla-regnvisa
+  title: Lilla regnvisan
+  language: Swedish
+  description: |
+    An original miniature written for testing Visor's Markdown lyrics and metadata search.
+  lyrics: |
+    Regnet ritar ringar,
 
-      tittar solen fram igen.
-    artist: [Visor]
-    author: [Visor]
-    composer: [Visor]
-    universe: [Visor originals]
-    tags: [rain, weather, calm, children]
-    rights: original
+    över tak och sten.
+
+    När den sista droppen klingar,
+
+    tittar solen fram igen.
+  artist: [Visor]
+  author: [Visor]
+  composer: [Visor]
+  universe: [Visor originals]
+  tags: [rain, weather, calm, children]
+  rights: original

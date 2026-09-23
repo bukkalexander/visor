@@ -43,7 +43,7 @@ def load_catalog() -> dict[str, Any]:
             path = ".".join(str(part) for part in error.absolute_path) or "root"
             details.append(f"{path}: {error.message}")
         raise CatalogError("Song database does not match its schema", details)
-    return {"songs": catalog["songs"], "schema": schema}
+    return {"songs": catalog, "schema": schema}
 
 
 def load_playlists() -> list[dict[str, Any]]:

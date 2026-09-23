@@ -1,58 +1,54 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Visor song catalogue
-type: object
-required: [songs]
-additionalProperties: false
-properties:
-  songs:
-    type: array
-    items:
-      type: object
-      additionalProperties: false
-      required: [id, title, language]
-      anyOf:
-        - required: [video]
-        - required: [lyrics]
-      properties:
-        id:
-          type: string
-          pattern: ^[a-z0-9-]+$
-        title:
-          type: string
-          minLength: 1
-        alternate_titles:
-          type: array
-          items: { type: string }
-        language:
-          type: string
-        description:
-          type: string
-        lyrics:
-          type: string
-        video:
-          type: string
-          pattern: ^https://(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[A-Za-z0-9_-]{11}
-        artist:
-          type: array
-          items: { type: string }
-        author:
-          type: array
-          items: { type: string }
-        composer:
-          type: array
-          items: { type: string }
-        universe:
-          type: array
-          items: { type: string }
-        source:
-          type: string
-        tags:
-          type: array
-          items: { type: string }
-        year:
-          type: integer
-          minimum: 1000
-          maximum: 2200
-        rights:
-          type: string
-          enum: [public-domain, copyrighted, original, unknown]
+type: array
+items:
+  type: object
+  additionalProperties: false
+  required: [id, title, language]
+  anyOf:
+    - required: [video]
+    - required: [lyrics]
+  properties:
+    id:
+      type: string
+      pattern: ^[a-z0-9-]+$
+    title:
+      type: string
+      minLength: 1
+    alternate_titles:
+      type: array
+      items: { type: string }
+    language:
+      type: string
+    description:
+      type: string
+    lyrics:
+      type: string
+      description: Markdown with optional ChordPro chords such as "[C]word [G7]word".
+    video:
+      type: string
+      pattern: ^https://(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[A-Za-z0-9_-]{11}
+    artist:
+      type: array
+      items: { type: string }
+    author:
+      type: array
+      items: { type: string }
+    composer:
+      type: array
+      items: { type: string }
+    universe:
+      type: array
+      items: { type: string }
+    source:
+      type: string
+    tags:
+      type: array
+      items: { type: string }
+    year:
+      type: integer
+      minimum: 1000
+      maximum: 2200
+    rights:
+      type: string
+      enum: [public-domain, copyrighted, original, unknown]

@@ -17,5 +17,5 @@ export type Song = {
 };
 
 export type Playlist = { id: string; name: string; description?: string; song_ids: string[] };
-export type Schema = { properties: { songs: { items: { properties: Record<string, { type?: string | string[]; enum?: string[] }> } } } };
+export type Schema = { items: { properties: Record<string, { type?: string | string[]; enum?: string[]; description?: string }> } };
 export type Page = 'library' | 'songs' | 'playlists' | 'player';

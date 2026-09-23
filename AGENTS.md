@@ -29,5 +29,5 @@ Do not commit secrets, generated dependencies, copyrighted lyrics/scores/recordi
 
 - `frontend/` owns the Vite/React/TypeScript application, Node manifest, compiler configuration, and frontend tests.
 - `backend/` owns FastAPI, Python requirements, its virtual environment, and backend tests.
-- `data/` is the human-editable YAML database and schema. Do not place generated files there.
+- `data/` is the human-editable YAML database and schema. `songs.yaml` is a top-level list, lyrics may use ChordPro `[C]word` notation, and no generated files belong here.
 - Keep generated dependencies and build output inside their owning component: `frontend/node_modules`, `frontend/dist`, and `backend/.venv`.
