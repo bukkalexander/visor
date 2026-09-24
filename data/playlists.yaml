@@ -1,1 +1,21 @@
-playlists: []
+playlists:
+- id: all-songs
+  name: All songs
+  description: ''
+  type: manual
+  song_ids:
+  - ba-ba-vita-lamm
+  - bjornen-sover
+  - blinka-lilla-stjarna
+  - bro-bro-breja
+  - ekorrn-satt-i-granen
+  - en-sockerbagare
+  - imse-vimse-spindel
+  - mors-lilla-olle
+  - prastens-lilla-kraka
+  - raven-raskar-over-isen
+  - ro-ro-till-fiskeskar
+  - sma-grodorna
+  - sov-du-lilla-videung
+  - tre-sma-gummor
+  - vem-kan-segla-forutan-vind
