@@ -16,7 +16,7 @@ class StoreTests(unittest.TestCase):
     def test_schema_requires_video_or_lyrics(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "songs.yaml"
-            path.write_text(yaml.safe_dump([{"id": "empty", "title": "Empty", "language": "English"}]))
+            path.write_text(yaml.safe_dump([{"id": "empty", "title": "Empty"}]))
             with patch.object(store, "SONGS_FILE", path), self.assertRaises(store.CatalogError) as result:
                 store.load_catalog()
             self.assertIn("schema", str(result.exception))

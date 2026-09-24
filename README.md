@@ -19,7 +19,9 @@ iteration*.md    Product specifications and implementation history
 - [`data/songs.schema.yaml`](data/songs.schema.yaml) is its JSON Schema, written as YAML.
 - [`data/playlists.yaml`](data/playlists.yaml) stores both hand-authored and in-app playlists.
 
-The API reads and validates the song file for every catalogue request, so editing `songs.yaml` only requires a browser reload. The file is a flat YAML list—each top-level `-` starts a song. Invalid YAML or schema violations are displayed in the app with paths and validation messages. Every song needs `id`, `title`, and `language`, plus at least one of `video` or `lyrics`.
+The API reads and validates the song file for every catalogue request, so editing `songs.yaml` only requires a browser reload. The file is a flat YAML list—each top-level `-` starts a song. Invalid YAML or schema violations are displayed in the app with paths and validation messages. Every song needs `id` and `title`, plus at least one of `video` or `lyrics`.
+
+The intentionally small metadata model contains titles, description, lyrics, video, artist, author, composer, universe, tags, and year. Language, source, and rights are deliberately omitted.
 
 Lyrics may use Markdown. Chords use ChordPro's compact inline form and are rendered above the following word:
 
@@ -35,7 +37,7 @@ The query language derives its available field names from the schema. Plain text
 ```text
 artist = "Wolfgang Amadeus Mozart"
 universe ~= "classical" AND tags in ("piano", "calm")
-(language = "Swedish" OR language = "Instrumental") AND title ~= "star"
+(tags = "bedtime" OR tags = "calm") AND title ~= "star"
 ```
 
 The home catalogue defaults to a compact table. Its menu contains faceted filters and sorting, while the view control retains an optional card layout. Selection mode can select individual songs or all visible filtered results and add them to a new or existing YAML-backed playlist.

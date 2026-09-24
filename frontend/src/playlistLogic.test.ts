@@ -3,10 +3,10 @@ import { resolvePlaylist } from './playlistLogic';
 import type { Song } from './types';
 
 const songs: Song[] = [
-  { id: 'night', title: 'Night song', language: 'Swedish', lyrics: 'text', tags: ['children', 'bedtime', 'calm'] },
-  { id: 'game', title: 'Game song', language: 'Swedish', lyrics: 'text', tags: ['movement'] }
+  { id: 'night', title: 'Night song', lyrics: 'text', tags: ['children', 'bedtime', 'calm'] },
+  { id: 'game', title: 'Game song', lyrics: 'text', tags: ['movement'] }
 ];
-const fields = ['id', 'title', 'language', 'lyrics', 'tags'];
+const fields = ['id', 'title', 'lyrics', 'tags'];
 
 describe('dynamic playlists', () => {
   it('treats an empty query as all songs', () => expect(resolvePlaylist({ id: 'all', name: 'All', type: 'dynamic', query: '' }, songs, fields)).toHaveLength(2));

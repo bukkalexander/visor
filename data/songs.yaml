@@ -1,6 +1,5 @@
 - id: imse-vimse-spindel
   title: Imse vimse spindel
-  language: Swedish
   lyrics: |
     [C]Imse vimse spindel [G7]klättrar upp för [C]trå'n.
     [C]Ner faller regnet, [G7]spolar spindeln [C]bort.
@@ -10,15 +9,12 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional children's song
   tags: [children, baby, movement, play-song, animals]
-  rights: public-domain
   video: https://youtu.be/XO2EVGi1Rb4?si=ZONyvZJNofVKtwBd
 
 - id: ba-ba-vita-lamm
   title: Bä bä vita lamm
   alternate_titles: [Bä, bä, vita lamm]
-  language: Swedish
   lyrics: |
     [C]Bä, bä, vita lamm, [G7]har du någon [C]ull?
     [C]Ja, ja, kära barn, [G7]jag har säcken [C]full.
@@ -27,15 +23,12 @@
   author: [August Strindberg]
   composer: [Alice Tegnér]
   universe: [Traditional songs]
-  source: Swedish children's song
   tags: [children, baby, animals]
-  rights: public-domain
   video: https://youtu.be/zk5mkadaSZw?si=dhHcvqpEmNEQclhg
 
 - id: blinka-lilla-stjarna
   title: Blinka lilla stjärna
   alternate_titles: [Twinkle, Twinkle, Little Star]
-  language: Swedish
   lyrics: |
     [C]Blinka, lilla stjärna [F]där,
     [C]hur jag [F]undrar [C]vad du [G7]är.
@@ -47,9 +40,7 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional nursery song
   tags: [children, baby, bedtime, night, calm, stars]
-  rights: public-domain
   video: https://youtu.be/XNMEOWmtNhs?si=o7ike5zk3tNOW8IN
 
 - id: nu-i-ro-slumra-in
@@ -58,6 +49,16 @@
 
 - id: tryggare-kan-ingen-vara
   title: Tryggare kan ingen vara
+  lyrics: |
+    [C]Tryggare kan ingen vara
+    än Guds [G7]lilla barna[C]skara.
+    Stjärnan ej på himla[F]fästet,
+    fågeln ej i kända [C]nästet.
+
+    [C]Herren sina trogna vårdar
+    uti [G7]Sions helga [C]gårdar.
+    Över dem han sig för[F]barmar,
+    bär dem uppå faders[C]armar.
   video: https://youtu.be/Wf6-gO8ulu0?si=cthCuqrFj10CCYLI
 
 - id: emils-uppochnervisa
@@ -74,19 +75,41 @@
 
 - id: i-ett-hus
   title: I ett hus
+  lyrics: |
+    [C]I ett hus vid skogens slut,
+    liten tomte tittar ut.
+    [F]Haren skuttar fram så fort,
+    [G7]knackar på dess [C]port.
+
+    [C]Hjälp, ack hjälp, ack hjälp du mig,
+    annars skjuter jägarn mig!
+    [F]Kom, ja kom i stugan in,
+    [G7]räck mig handen [C]din.
   video: https://youtu.be/ooNQzvQ-rRs?si=8RrGN2QQFYYaY_Dd
 
 - id: lilla-snigel
   title: Lilla snigel
+  lyrics: |
+    [C]Lilla snigel, akta dig,
+    [G7]akta dig, akta dig.
+    [C]Lilla snigel, akta dig,
+    [G7]annars tar jag [C]dig.
   video: https://youtu.be/VmtxGy2Sjms?si=lObYhpgdc4ERogXv
 
 - id: huvud-axlar-kna-och-ta
-  title: Huvud axlar knä och tå 
+  title: Huvud axlar knä och tå
+  lyrics: |
+    [C]Huvud, axlar, knä och tå,
+    knä och tå.
+    [G7]Huvud, axlar, knä och tå,
+    knä och [C]tå.
+    Ögon, öron, kinden klappen får.
+    [G7]Huvud, axlar, knä och tå,
+    knä och [C]tå.
   video: https://youtu.be/j91K2gppC0I?si=Z8LkasTNN5lupyFW
 
 - id: ekorrn-satt-i-granen
   title: Ekorr'n satt i granen
-  language: Swedish
   lyrics: |
     [C]Ekorr'n satt i granen,
     [F]skulle skala [C]kottar.
@@ -106,13 +129,10 @@
   author: [Alice Tegnér]
   composer: [Alice Tegnér]
   universe: [Traditional songs]
-  source: Swedish children's song
   tags: [children, animals, nature, playful]
-  rights: public-domain
 
 - id: mors-lilla-olle
   title: Mors lilla Olle
-  language: Swedish
   lyrics: |
     [C]Mors lilla Olle i [G7]skogen gick,
     [C]rosor på kinden och [G7]solsken i blick.
@@ -136,15 +156,12 @@
   author: [Alice Tegnér]
   composer: [Alice Tegnér]
   universe: [Traditional songs]
-  source: Sjung med oss, mamma!
   tags: [children, animals, nature, story-song]
   year: 1895
-  rights: public-domain
   video: https://youtu.be/nDzX9V7ORMw?si=vajd4wcKZHmmuf-b
 
 - id: bjornen-sover
   title: Björnen sover
-  language: Swedish
   lyrics: |
     [C]Björnen sover,
     björnen [G7]sover
@@ -159,13 +176,10 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional Swedish singing game
   tags: [children, animals, movement, play-song, game]
-  rights: public-domain
 
 - id: prastens-lilla-kraka
   title: Prästens lilla kråka
-  language: Swedish
   lyrics: |
     [C]Prästens lilla kråka
     skulle ut och [G7]åka,
@@ -178,14 +192,11 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional Swedish children's song
   tags: [children, baby, movement, play-song, animals]
-  rights: public-domain
   video: https://youtu.be/4k9ToOupMEs?si=1bqn-0X4g_Q7P0TS
 
 - id: sma-grodorna
   title: Små grodorna
-  language: Swedish
   lyrics: |
     [C]Små grodorna, små grodorna
     är [G7]lustiga att [C]se.
@@ -207,14 +218,11 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional Swedish singing game
   tags: [children, movement, dance, play-song, animals, midsummer]
-  rights: public-domain
   video: https://youtu.be/Gl1P8I5Sry8?si=HYT-kVNMavoYKHOC
 
 - id: bro-bro-breja
   title: Bro bro breja
-  language: Swedish
   lyrics: |
     [C]Bro, bro breja,
     [G7]stockar och stenar,
@@ -232,13 +240,10 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional Swedish singing game
   tags: [children, movement, play-song, game]
-  rights: public-domain
 
 - id: raven-raskar-over-isen
   title: Räven raskar över isen
-  language: Swedish
   lyrics: |
     [C]Räven raskar över isen,
     [G7]räven raskar över [C]isen.
@@ -253,14 +258,11 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional Scandinavian singing game
   tags: [children, movement, dance, play-song, christmas, midsummer]
-  rights: public-domain
 
 - id: en-sockerbagare
   title: En sockerbagare
   alternate_titles: [Sockerbagaren]
-  language: Swedish
   lyrics: |
     [C]En sockerbagare han [G7]bor i staden,
     han bakar kakor mest [C]hela dagen.
@@ -274,15 +276,12 @@
   author: [Alice Tegnér]
   composer: [Alice Tegnér]
   universe: [Traditional songs]
-  source: Sjung med oss, mamma!
   tags: [children, christmas, food, baking]
   year: 1895
-  rights: public-domain
 
 - id: sov-du-lilla-videung
   title: Sov du lilla videung
   alternate_titles: [Videvisan]
-  language: Swedish
   lyrics: |
     [C]Sov, du lilla videung,
     [G7]än så är det [C]vinter.
@@ -306,14 +305,11 @@
   author: [Zacharias Topelius]
   composer: [Alice Tegnér]
   universe: [Traditional songs]
-  source: Videvisan
   tags: [children, baby, bedtime, lullaby, calm, nature, winter, spring]
   year: 1895
-  rights: public-domain
 
 - id: vem-kan-segla-forutan-vind
   title: Vem kan segla förutan vind
-  language: Swedish
   lyrics: |
     [Am]Vem kan segla förutan vind?
     [Dm]Vem kan ro utan [Am]åror?
@@ -328,13 +324,10 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Finland-Swedish folk song
   tags: [children, folk-song, calm, bedtime, sea]
-  rights: public-domain
 
 - id: ro-ro-till-fiskeskar
   title: Ro, ro till fiskeskär
-  language: Swedish
   lyrics: |
     [C]Ro, ro till fiskeskär,
     [G7]många fiskar få vi [C]där:
@@ -346,13 +339,10 @@
   author: [Traditional]
   composer: [Traditional]
   universe: [Traditional songs]
-  source: Traditional Swedish nursery rhyme
   tags: [children, baby, lullaby, calm, sea, fishing]
-  rights: public-domain
 
 - id: tre-sma-gummor
   title: Tre små gummor
-  language: Swedish
   lyrics: |
     [C]Tre små gummor skulle gå en gång
     till [G7]marknaden uti [C]Nora.
@@ -365,7 +355,5 @@
     och [C]fröjdas hela dagen uti Nora.
   author: [Anna Maria Roos]
   universe: [Traditional songs]
-  source: Swedish children's song
   tags: [children, movement, dance, playful]
-  rights: public-domain
   video: https://youtu.be/PpNVA8sqawg?si=5UbDUQimLajUrQW_

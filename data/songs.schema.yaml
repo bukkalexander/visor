@@ -4,7 +4,7 @@ type: array
 items:
   type: object
   additionalProperties: false
-  required: [id, title, language]
+  required: [id, title]
   anyOf:
     - required: [video]
     - required: [lyrics]
@@ -18,8 +18,6 @@ items:
     alternate_titles:
       type: array
       items: { type: string }
-    language:
-      type: string
     description:
       type: string
     lyrics:
@@ -40,8 +38,6 @@ items:
     universe:
       type: array
       items: { type: string }
-    source:
-      type: string
     tags:
       type: array
       items: { type: string }
@@ -49,6 +45,3 @@ items:
       type: integer
       minimum: 1000
       maximum: 2200
-    rights:
-      type: string
-      enum: [public-domain, copyrighted, original, unknown]
