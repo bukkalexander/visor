@@ -40,6 +40,20 @@ universe ~= "classical" AND tags in ("piano", "calm")
 
 The home catalogue defaults to a compact table. Its menu contains faceted filters and sorting, while the view control retains an optional card layout. Selection mode can select individual songs or all visible filtered results and add them to a new or existing YAML-backed playlist.
 
+Playlists have two modes. A `manual` playlist stores ordered `song_ids`; a `dynamic` playlist stores a catalogue `query` and is re-evaluated whenever it is shown or played. An empty dynamic query includes every song:
+
+```yaml
+playlists:
+  - id: bedtime
+    name: Bedtime
+    type: dynamic
+    query: tags = "bedtime"
+  - id: everything
+    name: All songs
+    type: dynamic
+    query: ""
+```
+
 ## Development
 
 ```sh

@@ -1,3 +1,8 @@
+I want playlists to also be able to store as search filters, so that e.g. an empty filter catches all songs. In this way, we can have a dynamic playlist for e.g. the label bedtime etc.
+
+Please reelase songs.yamla and use the data below instead. And remove all playlists.
+
+```yaml
 - id: imse-vimse-spindel
   title: Imse vimse spindel
   language: Swedish
@@ -330,3 +335,12 @@
   source: Swedish children's song
   tags: [children, movement, dance, playful]
   rights: public-domain
+```
+
+## Implementation notes
+
+- Replaced `songs.yaml` with the supplied 15-song public-domain catalogue and reset `playlists.yaml` to `playlists: []`.
+- Playlist records now have `type: manual` with `song_ids`, or `type: dynamic` with `query`. Missing type remains compatible as manual.
+- Dynamic queries use the catalogue query parser and are resolved against current song data for preview, counts, and playback. Empty queries resolve to every song.
+- The playlist editor switches between selected-song and saved-search modes, previews dynamic matches, and prevents saving invalid structured queries.
+- Equality and `in` now compare individual array values, so `tags = "bedtime"` matches a multi-tag song as expected.

@@ -15,7 +15,9 @@ DIST = ROOT / "frontend" / "dist"
 class PlaylistPayload(BaseModel):
     name: str
     description: str = ""
+    type: str = "manual"
     song_ids: list[str] = Field(default_factory=list)
+    query: str = ""
 
 
 def catalog_error(error: CatalogError) -> JSONResponse:

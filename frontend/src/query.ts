@@ -91,8 +91,11 @@ const fold = (value: unknown) => (Array.isArray(value) ? value.join(' ') : Strin
 function evaluate(song: Song, expression: Expression): boolean {
   if (expression.kind === 'and') return evaluate(song, expression.left) && evaluate(song, expression.right);
   if (expression.kind === 'or') return evaluate(song, expression.left) || evaluate(song, expression.right);
-  const actual = fold(song[expression.field as keyof Song]);
-  return expression.values.some(value => expression.operator === '=' ? actual === fold(value) : actual.includes(fold(value)));
+  const raw = song[expression.field as keyof Song];
+  const actual = (Array.isArray(raw) ? raw : [raw]).map(fold);
+  return expression.values.some(value => expression.operator === '~='
+    ? actual.some(item => item.includes(fold(value)))
+    : actual.some(item => item === fold(value)));
 }
 
 export function searchSongs(songs: Song[], query: string, fields: string[]): Song[] {

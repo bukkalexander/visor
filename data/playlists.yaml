@@ -1,6 +1,1 @@
-playlists:
-- id: simple-songs
-  name: Simple songs
-  description: Imse vimse spindel etc
-  song_ids:
-  - imse-vimse-spindel
+playlists: []

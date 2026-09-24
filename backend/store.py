@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from pathlib import Path
 import re
 import tempfile
@@ -70,15 +69,20 @@ def slugify(value: str) -> str:
 def save_playlist(payload: dict[str, Any], playlist_id: str | None = None) -> dict[str, Any]:
     playlists = load_playlists()
     name = str(payload.get("name", "")).strip()
+    playlist_type = str(payload.get("type", "manual"))
     song_ids = payload.get("song_ids", [])
     if not name:
         raise CatalogError("Playlist name is required")
+    if playlist_type not in {"manual", "dynamic"}:
+        raise CatalogError("Playlist type must be manual or dynamic")
     if not isinstance(song_ids, list) or any(not isinstance(item, str) for item in song_ids):
         raise CatalogError("song_ids must be a list of strings")
     catalog_ids = {song["id"] for song in load_catalog()["songs"]}
     unknown = [item for item in song_ids if item not in catalog_ids]
     if unknown:
         raise CatalogError("Playlist contains unknown songs", unknown)
+    common = {"name": name, "description": str(payload.get("description", "")).strip(), "type": playlist_type}
+    content = {"query": str(payload.get("query", "")).strip()} if playlist_type == "dynamic" else {"song_ids": song_ids}
     if playlist_id is None:
         base = slugify(name)
         used = {item["id"] for item in playlists}
@@ -87,13 +91,13 @@ def save_playlist(payload: dict[str, Any], playlist_id: str | None = None) -> di
         while playlist_id in used:
             playlist_id = f"{base}-{counter}"
             counter += 1
-        record = {"id": playlist_id, "name": name, "description": str(payload.get("description", "")).strip(), "song_ids": song_ids}
+        record = {"id": playlist_id, **common, **content}
         playlists.append(record)
     else:
         index = next((i for i, item in enumerate(playlists) if item["id"] == playlist_id), None)
         if index is None:
             raise KeyError(playlist_id)
-        record = {**deepcopy(playlists[index]), "name": name, "description": str(payload.get("description", "")).strip(), "song_ids": song_ids}
+        record = {"id": playlist_id, **common, **content}
         playlists[index] = record
     write_playlists(playlists)
     return record

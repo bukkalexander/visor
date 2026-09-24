@@ -16,6 +16,6 @@ export type Song = {
   rights?: 'public-domain' | 'copyrighted' | 'original' | 'unknown';
 };
 
-export type Playlist = { id: string; name: string; description?: string; song_ids: string[] };
+export type Playlist = { id: string; name: string; description?: string; type?: 'manual' | 'dynamic'; song_ids?: string[]; query?: string };
 export type Schema = { items: { properties: Record<string, { type?: string | string[]; enum?: string[]; description?: string }> } };
 export type Page = 'library' | 'songs' | 'playlists' | 'player';

@@ -4,6 +4,7 @@ import { ArrowLeft, BookOpen, Check, ChevronDown, ChevronUp, CirclePlay, Grid2X2
 import { api } from './api';
 import { ChordLyrics } from './chords';
 import { nextTrackIndex, shuffledTrackIndex, shouldRecoverPlayback, type RepeatMode } from './playerLogic';
+import { resolvePlaylist } from './playlistLogic';
 import { searchSongs } from './query';
 import type { Page, Playlist, Schema, Song } from './types';
 
@@ -27,7 +28,8 @@ const songValues = (song: Song, field: keyof Song): string[] => { const value = 
 function Library({ songs, schema, playlists, reloadPlaylists, onOpen }: { songs: Song[]; schema: Schema; playlists: Playlist[]; reloadPlaylists: () => Promise<void>; onOpen: (song: Song) => void }) {
   const [query, setQuery] = useState(''); const [layout, setLayout] = useState<'cards' | 'table'>('table'); const [drawer, setDrawer] = useState(false); const [sort, setSort] = useState('title:asc');
   const [filters, setFilters] = useState<Record<string, string[]>>({}); const [selecting, setSelecting] = useState(false); const [selected, setSelected] = useState<Set<string>>(new Set()); const [playlistSheet, setPlaylistSheet] = useState(false); const [newName, setNewName] = useState(''); const [targetPlaylist, setTargetPlaylist] = useState(playlists[0]?.id || ''); const [saving, setSaving] = useState(false); const [actionError, setActionError] = useState('');
-  useEffect(() => { if (!targetPlaylist && playlists[0]) setTargetPlaylist(playlists[0].id); }, [playlists, targetPlaylist]);
+  const manualPlaylists = playlists.filter(playlist => playlist.type !== 'dynamic');
+  useEffect(() => { if (!targetPlaylist && manualPlaylists[0]) setTargetPlaylist(manualPlaylists[0].id); }, [manualPlaylists, targetPlaylist]);
   const fields = useMemo(() => Object.keys(schema.items.properties), [schema]);
   const facets = useMemo(() => Object.fromEntries(filterKeys.map(field => [field, Array.from(new Set(songs.flatMap(song => songValues(song, field)))).sort((a, b) => a.localeCompare(b))])), [songs]);
   const result = useMemo(() => {
@@ -46,8 +48,8 @@ function Library({ songs, schema, playlists, reloadPlaylists, onOpen }: { songs:
   const addToPlaylist = async (create: boolean) => {
     setSaving(true); setActionError('');
     try {
-      if (create) await api.createPlaylist({ name: newName.trim(), description: '', song_ids: [...selected] });
-      else { const playlist = playlists.find(item => item.id === targetPlaylist); if (!playlist) throw new Error('Choose a playlist'); await api.updatePlaylist({ ...playlist, song_ids: [...new Set([...playlist.song_ids, ...selected])] }); }
+      if (create) await api.createPlaylist({ name: newName.trim(), description: '', type: 'manual', song_ids: [...selected] });
+      else { const playlist = manualPlaylists.find(item => item.id === targetPlaylist); if (!playlist) throw new Error('Choose a manual playlist'); await api.updatePlaylist({ ...playlist, type: 'manual', song_ids: [...new Set([...(playlist.song_ids || []), ...selected])] }); }
       await reloadPlaylists(); finishSelection();
     } catch (error) { setActionError((error as Error).message); } finally { setSaving(false); }
   };
@@ -65,7 +67,7 @@ function Library({ songs, schema, playlists, reloadPlaylists, onOpen }: { songs:
       <div className="table-wrap song-table"><table><thead><tr>{selecting && <th className="check-column"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} aria-label="Select all shown songs"/></th>}<th className="title-column">Title</th><th>Artist / composer</th><th>Universe</th><th>Language</th><th>Year</th></tr></thead><tbody>{result.songs.map(song => <tr key={song.id} className={selected.has(song.id) ? 'selected' : ''}>{selecting && <td><input type="checkbox" checked={selected.has(song.id)} onChange={() => toggleSong(song.id)} aria-label={`Select ${song.title}`}/></td>}<td className="title-column"><button onClick={selecting ? () => toggleSong(song.id) : () => onOpen(song)}>{song.title}</button></td><td>{words(song.artist || song.composer)}</td><td>{words(song.universe)}</td><td>{song.language}</td><td>{song.year || '—'}</td></tr>)}</tbody></table></div>}
     {!result.songs.length && !result.error && <div className="empty"><Search/><h2>No songs found</h2></div>}
     <div className={`drawer-backdrop ${drawer ? 'open' : ''}`} onClick={() => setDrawer(false)}/><aside className={`filter-drawer ${drawer ? 'open' : ''}`} aria-hidden={!drawer}><header><div><span>Library</span><h2>Filter & sort</h2></div><button onClick={() => setDrawer(false)} aria-label="Close filters"><X/></button></header><label className="sort-field"><span>Sort</span><select value={sort} onChange={event => setSort(event.target.value)}><option value="title:asc">Title A–Z</option><option value="title:desc">Title Z–A</option><option value="year:desc">Newest year</option><option value="year:asc">Oldest year</option></select></label>{filterKeys.map(field => <details key={field} open><summary>{fieldLabel(field)} <small>{filters[field]?.length || ''}</small></summary><div>{facets[field].map(value => <label key={value}><input type="checkbox" checked={(filters[field] || []).includes(value)} onChange={() => toggleFilter(field, value)}/><span><Check/></span>{value}</label>)}</div></details>)}<footer><button onClick={() => setFilters({})}>Clear</button><button onClick={() => setDrawer(false)}>Show {result.songs.length} songs</button></footer></aside>
-    {playlistSheet && <div className="modal-backdrop" onClick={() => setPlaylistSheet(false)}><section className="playlist-sheet" onClick={event => event.stopPropagation()}><header><h2>Add {selected.size} songs</h2><button onClick={() => setPlaylistSheet(false)}><X/></button></header>{actionError && <div className="inline-error">{actionError}</div>}<label className="field"><span>Existing playlist</span><select value={targetPlaylist} onChange={event => setTargetPlaylist(event.target.value)}>{playlists.map(list => <option value={list.id} key={list.id}>{list.name}</option>)}</select></label><button className="primary-action" disabled={saving || !targetPlaylist} onClick={() => addToPlaylist(false)}>Add to existing</button><div className="or"><span>or create new</span></div><label className="field"><span>Playlist name</span><input value={newName} onChange={event => setNewName(event.target.value)}/></label><button className="secondary-action" disabled={saving || !newName.trim()} onClick={() => addToPlaylist(true)}>Create playlist</button></section></div>}
+    {playlistSheet && <div className="modal-backdrop" onClick={() => setPlaylistSheet(false)}><section className="playlist-sheet" onClick={event => event.stopPropagation()}><header><h2>Add {selected.size} songs</h2><button onClick={() => setPlaylistSheet(false)}><X/></button></header>{actionError && <div className="inline-error">{actionError}</div>}{manualPlaylists.length > 0 && <><label className="field"><span>Existing manual playlist</span><select value={targetPlaylist} onChange={event => setTargetPlaylist(event.target.value)}>{manualPlaylists.map(list => <option value={list.id} key={list.id}>{list.name}</option>)}</select></label><button className="primary-action" disabled={saving || !targetPlaylist} onClick={() => addToPlaylist(false)}>Add to existing</button><div className="or"><span>or create new</span></div></>}<label className="field"><span>Playlist name</span><input value={newName} onChange={event => setNewName(event.target.value)}/></label><button className="secondary-action" disabled={saving || !newName.trim()} onClick={() => addToPlaylist(true)}>Create playlist</button></section></div>}
   </main>;
 }
 
@@ -89,17 +91,24 @@ function SongsPage({ songs, selected, setSelected }: { songs: Song[]; selected?:
   return <main className="page songs-page"><header className="page-title"><span>Library</span><h1>Songs</h1></header><div className="recycle-list">{songs.map(song => <button key={song.id} onClick={() => setSelected(song)}><span className="list-cover">{song.title[0]}</span><span><strong>{song.title}</strong><small>{words(song.artist || song.composer)}</small></span><span>›</span></button>)}</div></main>;
 }
 
-type Draft = { id?: string; name: string; description: string; song_ids: string[] };
-const emptyDraft: Draft = { name: '', description: '', song_ids: [] };
+type Draft = { id?: string; name: string; description: string; type: 'manual' | 'dynamic'; song_ids: string[]; query: string };
+const emptyDraft: Draft = { name: '', description: '', type: 'manual', song_ids: [], query: '' };
 
-function PlaylistComposer({ songs, playlists, reload, onPlay }: { songs: Song[]; playlists: Playlist[]; reload: () => Promise<void>; onPlay: (list: Playlist) => void }) {
+function PlaylistComposer({ songs, schema, playlists, reload, onPlay }: { songs: Song[]; schema: Schema; playlists: Playlist[]; reload: () => Promise<void>; onPlay: (list: Playlist) => void }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const fields = useMemo(() => Object.keys(schema.items.properties), [schema]);
+  const resolve = (playlist: Playlist) => { try { return { songs: resolvePlaylist(playlist, songs, fields), error: '' }; } catch (caught) { return { songs: [], error: (caught as Error).message }; } };
+  const preview = draft?.type === 'dynamic' ? resolve({ id: draft.id || '', name: draft.name, type: 'dynamic', query: draft.query }).songs : [];
+  const queryError = draft?.type === 'dynamic' ? resolve({ id: draft.id || '', name: draft.name, type: 'dynamic', query: draft.query }).error : '';
   const save = async () => {
     if (!draft) return; setBusy(true); setError('');
     try {
-      if (draft.id) await api.updatePlaylist(draft as Playlist); else await api.createPlaylist(draft);
+      const payload: Playlist = draft.type === 'dynamic'
+        ? { id: draft.id || '', name: draft.name, description: draft.description, type: 'dynamic', query: draft.query }
+        : { id: draft.id || '', name: draft.name, description: draft.description, type: 'manual', song_ids: draft.song_ids };
+      if (draft.id) await api.updatePlaylist(payload); else await api.createPlaylist(payload);
       await reload(); setDraft(null);
     } catch (caught) { setError((caught as Error).message); } finally { setBusy(false); }
   };
@@ -109,16 +118,22 @@ function PlaylistComposer({ songs, playlists, reload, onPlay }: { songs: Song[];
     if (target < 0 || target >= next.length) return; [next[index], next[target]] = [next[target], next[index]]; setDraft({ ...draft, song_ids: next });
   };
   if (draft) return <main className="page composer-page">
-    <header className="editor-head"><button onClick={() => setDraft(null)}><X/></button><h1>{draft.id ? 'Edit playlist' : 'New playlist'}</h1><button className="save" disabled={busy || !draft.name.trim()} onClick={save}>Save</button></header>
+    <header className="editor-head"><button onClick={() => setDraft(null)}><X/></button><h1>{draft.id ? 'Edit playlist' : 'New playlist'}</h1><button className="save" disabled={busy || !draft.name.trim() || !!queryError} onClick={save}>Save</button></header>
     {error && <div className="inline-error">{error}</div>}
     <label className="field"><span>Name</span><input value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })}/></label>
     <label className="field"><span>Description</span><textarea value={draft.description} onChange={event => setDraft({ ...draft, description: event.target.value })}/></label>
-    <h2 className="subhead">Tracks · {draft.song_ids.length}</h2>
-    <div className="selected-tracks">{draft.song_ids.map((id, index) => { const song = songs.find(item => item.id === id); return song ? <div key={id}><span>{index + 1}</span><strong>{song.title}</strong><button onClick={() => move(index, -1)} aria-label="Move up"><ChevronUp/></button><button onClick={() => move(index, 1)} aria-label="Move down"><ChevronDown/></button><button onClick={() => setDraft({ ...draft, song_ids: draft.song_ids.filter(item => item !== id) })} aria-label="Remove"><X/></button></div> : null; })}</div>
-    <h2 className="subhead">Add songs</h2>
-    <div className="song-checks">{songs.filter(song => !draft.song_ids.includes(song.id)).map(song => <button key={song.id} onClick={() => setDraft({ ...draft, song_ids: [...draft.song_ids, song.id] })}><Plus/><span><strong>{song.title}</strong><small>{words(song.artist || song.composer)}</small></span></button>)}</div>
+    <div className="playlist-type" role="group" aria-label="Playlist type"><button className={draft.type === 'manual' ? 'active' : ''} onClick={() => setDraft({ ...draft, type: 'manual' })}>Selected songs</button><button className={draft.type === 'dynamic' ? 'active' : ''} onClick={() => setDraft({ ...draft, type: 'dynamic' })}>Saved search</button></div>
+    {draft.type === 'dynamic' ? <>
+      <label className="field query-field"><span>Search filter</span><input value={draft.query} onChange={event => setDraft({ ...draft, query: event.target.value })} placeholder='tags = "bedtime"'/><small>Leave empty to include every song.</small></label>
+      {queryError ? <div className="inline-error"><strong>Invalid query</strong>{queryError}</div> : <><h2 className="subhead">Matches · {preview.length}</h2><div className="dynamic-preview">{preview.map(song => <div key={song.id}><strong>{song.title}</strong><small>{words(song.artist || song.composer)}</small></div>)}</div></>}
+    </> : <>
+      <h2 className="subhead">Tracks · {draft.song_ids.length}</h2>
+      <div className="selected-tracks">{draft.song_ids.map((id, index) => { const song = songs.find(item => item.id === id); return song ? <div key={id}><span>{index + 1}</span><strong>{song.title}</strong><button onClick={() => move(index, -1)} aria-label="Move up"><ChevronUp/></button><button onClick={() => move(index, 1)} aria-label="Move down"><ChevronDown/></button><button onClick={() => setDraft({ ...draft, song_ids: draft.song_ids.filter(item => item !== id) })} aria-label="Remove"><X/></button></div> : null; })}</div>
+      <h2 className="subhead">Add songs</h2>
+      <div className="song-checks">{songs.filter(song => !draft.song_ids.includes(song.id)).map(song => <button key={song.id} onClick={() => setDraft({ ...draft, song_ids: [...draft.song_ids, song.id] })}><Plus/><span><strong>{song.title}</strong><small>{words(song.artist || song.composer)}</small></span></button>)}</div>
+    </>}
   </main>;
-  return <main className="page playlists-page"><header className="page-title action-title"><div><span>Collections</span><h1>Playlists</h1></div><button onClick={() => setDraft(emptyDraft)}><Plus/> New</button></header><section className="playlist-grid">{playlists.map(list => <article key={list.id}><div className="playlist-art"><ListMusic/><span>{list.song_ids.length}</span></div><h2>{list.name}</h2><p>{list.description || `${list.song_ids.length} songs`}</p><div><button className="play" onClick={() => onPlay(list)} disabled={!list.song_ids.some(id => songs.find(song => song.id === id)?.video)}><Play/> Play</button><button onClick={() => setDraft({ ...list, description: list.description || '' })}>Edit</button><button onClick={() => remove(list.id)} aria-label={`Delete ${list.name}`}><Trash2/></button></div></article>)}</section></main>;
+  return <main className="page playlists-page"><header className="page-title action-title"><div><span>Collections</span><h1>Playlists</h1></div><button onClick={() => setDraft({ ...emptyDraft })}><Plus/> New</button></header>{!playlists.length && <div className="empty"><ListMusic/><h2>No playlists yet</h2><p>Create a selected-song list or save a search.</p></div>}<section className="playlist-grid">{playlists.map(list => { const result = resolve(list); const materialized = { ...list, song_ids: result.songs.map(song => song.id) }; return <article key={list.id}><div className="playlist-art"><ListMusic/><span>{result.songs.length}</span>{list.type === 'dynamic' && <b>Dynamic</b>}</div><h2>{list.name}</h2><p>{result.error || list.description || (list.type === 'dynamic' ? list.query || 'All songs' : `${result.songs.length} songs`)}</p><div><button className="play" onClick={() => onPlay(materialized)} disabled={!!result.error || !result.songs.some(song => song.video)}><Play/> Play</button><button onClick={() => setDraft({ id: list.id, name: list.name, description: list.description || '', type: list.type === 'dynamic' ? 'dynamic' : 'manual', song_ids: list.song_ids || [], query: list.query || '' })}>Edit</button><button onClick={() => remove(list.id)} aria-label={`Delete ${list.name}`}><Trash2/></button></div></article>; })}</section></main>;
 }
 
 declare global { interface Window { YT?: { Player: new (element: HTMLElement, options: object) => YouTubePlayer; PlayerState: { ENDED: number; PLAYING: number; PAUSED: number; BUFFERING: number; CUED: number; UNSTARTED: number } }; onYouTubeIframeAPIReady?: () => void; } }
@@ -198,6 +213,6 @@ export default function App() {
   if (loading) return <div className="loading"><span>V</span></div>;
   if (error || !schema) return <main className="fatal"><div>!</div><h1>Song database unavailable</h1><p>{error?.message || 'Unknown schema error'}</p>{error?.details?.length && <pre>{error.details.join('\n')}</pre>}<button onClick={loadCatalog}><RefreshCw/> Try again</button></main>;
   return <div className="app-shell">
-    {page === 'library' && <Library songs={songs} schema={schema} playlists={playlists} reloadPlaylists={loadPlaylists} onOpen={openSong}/>} {page === 'songs' && <SongsPage songs={songs} selected={selected} setSelected={setSelected}/>} {page === 'playlists' && <PlaylistComposer songs={songs} playlists={playlists} reload={loadPlaylists} onPlay={list => { setActivePlaylist(list); setPage('player'); }}/>} {page === 'player' && <PlayerPage songs={songs} playlist={activePlaylist}/>}<Navigation page={page} setPage={next => { setPage(next); if (next !== 'songs') setSelected(undefined); }}/>
+    {page === 'library' && <Library songs={songs} schema={schema} playlists={playlists} reloadPlaylists={loadPlaylists} onOpen={openSong}/>} {page === 'songs' && <SongsPage songs={songs} selected={selected} setSelected={setSelected}/>} {page === 'playlists' && <PlaylistComposer songs={songs} schema={schema} playlists={playlists} reload={loadPlaylists} onPlay={list => { setActivePlaylist(list); setPage('player'); }}/>} {page === 'player' && <PlayerPage songs={songs} playlist={activePlaylist}/>}<Navigation page={page} setPage={next => { setPage(next); if (next !== 'songs') setSelected(undefined); }}/>
   </div>;
 }
