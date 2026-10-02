@@ -16,13 +16,4 @@
 - Playlist records are either `manual` with ordered `song_ids`, or `dynamic` with a saved `query`; an empty dynamic query intentionally matches the full catalogue.
 - Keep generated dependencies and build output inside their owning component: `frontend/node_modules`, `frontend/dist`, and `backend/.venv`.
 
-<!-- app-workflow:begin -->
-## Shared app workflow
-
-Read `.agents/workflow.json` and use the `app-workflow` skill at `/home/bukka/work/agents/skills/app-workflow/SKILL.md`.
-A bare `N.md` means implement `.iterations/N.md`. Read the requested specification and relevant earlier requirements; preserve later unrequested specs. Missing files are errors, not a request to select another iteration.
-An implementation request authorizes the complete test/build/backup/deploy/verify/commit/push flow unless the user limits it. Run `/home/bukka/work/agents/agent.sh deliver --iteration N.md` after implementation. Include all existing non-secret repository changes, preserve user work, use main, and never force-push.
-Review, explanation, planning, and conversation do not authorize delivery. During ordinary code edits, start or reuse `/home/bukka/work/agents/agent.sh dev start`; publish production only when requested. Report the dev URL.
-Production runs from deployed snapshots. Never restore production databases on pull or deployment; restoration is explicit. Only configured production data snapshots belong in `backups/production/`; uploaded files remain excluded.
-New web apps default to Vite, React, TypeScript, FastAPI, and SQLite, including SQLite JSON/key-value tables when suitable. Existing app stacks remain supported. Authentication is optional for trusted private-tailnet apps.
-<!-- app-workflow:end -->
+Workflow configuration: [`.agents/workflow.json`](.agents/workflow.json). Shared procedures: [app-workflow skill](../agents/skills/app-workflow/SKILL.md).

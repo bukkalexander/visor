@@ -9,8 +9,8 @@ frontend/        React, TypeScript, Vite, and frontend tests
 backend/         FastAPI, Python dependencies, and backend tests
 data/            Song schema, song catalogue, and playlists
 .orc/            Orc service contract
-run.sh           Production build and service entry point
-iteration*.md    Product specifications and implementation history
+run.sh           Prepared production service entry point
+.iterations/     Product specifications
 ```
 
 ## Data
@@ -87,7 +87,7 @@ backend/.venv/bin/python -m unittest discover -s backend/tests -v
 
 ## Orc
 
-`run.sh` installs missing local dependencies, builds using `ORC_BASE_PATH`, and starts FastAPI in the foreground. The Orc app definition uses that script. Restart from this repository with:
+`run.sh` starts prepared FastAPI in the foreground. The workflow builds with the configured base path before deploying a release. Orc supervises the selected release; restarting does not deploy checkout edits:
 
 ```sh
 (cd ../orc && ./orc.sh restart visor)
@@ -95,8 +95,6 @@ backend/.venv/bin/python -m unittest discover -s backend/tests -v
 
 Visor links to YouTube rather than storing recordings. Only public-domain or original sample lyrics are included.
 
-## Shared delivery and development
+## Development and delivery
 
-The app uses `.agents/workflow.json` and the shared tooling in `../agents`. From this repo run `../agents/agent.sh prepare`, `dev start`, `test`, or `deliver --iteration N.md`. Dev runs at a separate private `/dev/<app>/` route with its own data; production runs from a release snapshot. Runtime launchers require dependencies and assets to be prepared first.
-
-`backup` snapshots configured user data and publishes only backup files; `backup --local-only` does not publish. Backups run on delivery/manual request, not on a schedule. `restore DATA_PATH` is explicit; pulling/deploying never restores data. Uploaded files referenced by databases are not backed up. See `../agents/process/README.md` for the full contract.
+Use `../agents/agent.sh dev start` for the configured preview and `../agents/agent.sh test` for profile checks. See the [shared process contract](../agents/process/README.md) for delivery and data recovery; this app's commands and data paths are declared in [`.agents/workflow.json`](.agents/workflow.json).
