@@ -9,3 +9,9 @@ dist/
 vite.config.js
 vite.config.d.ts
 data/tmp*
+# Shared workflow: live data and artifacts stay outside source.
+__pycache__/
+.agents/dev/
+!backups/
+!backups/production/
+!backups/production/**

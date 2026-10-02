@@ -1,22 +1,5 @@
 # Agent workflow
 
-## Iterations are the specification
-
-The repository owner adds `iteration*.md` files. For each implementation request, read this file, then read every iteration document and treat the highest-numbered not-yet-implemented iteration as the primary specification. Preserve completed requirements from earlier iterations unless the new document explicitly replaces them. Record meaningful decisions in the relevant iteration document or README.
-
-## Required completion loop
-
-For every implementation step:
-
-1. Inspect the repository and current Git status. Never overwrite unrelated owner changes.
-2. Implement the current iteration completely, using mobile layouts as the default and progressively enhancing larger screens.
-3. Run all available tests and a focused smoke test.
-4. Rebuild if the stack has a build step.
-5. Restart the service with `(cd ../orc && ./orc.sh restart visor)` and verify it through the Orc route or local service endpoint. Orc's launcher must run from its own repository. If the Orc registration or unit is missing, update `../orc/apps.yaml`, run the least-disruptive setup needed, then retry.
-6. Commit the Visor repository with a concise message and push the completed commit to `origin main`.
-
-Do not commit secrets, generated dependencies, copyrighted lyrics/scores/recordings without explicit rights, or changes in sibling repositories as part of the Visor commit. If push, service control, or verification fails, report the exact failure and leave the local commit intact.
-
 ## Product and engineering conventions
 
 - Swedish UI copy is the product default; code and technical documentation may be English.
@@ -32,3 +15,14 @@ Do not commit secrets, generated dependencies, copyrighted lyrics/scores/recordi
 - `data/` is the human-editable YAML database and schema. `songs.yaml` is a top-level list, lyrics may use ChordPro `[C]word` notation, and no generated files belong here.
 - Playlist records are either `manual` with ordered `song_ids`, or `dynamic` with a saved `query`; an empty dynamic query intentionally matches the full catalogue.
 - Keep generated dependencies and build output inside their owning component: `frontend/node_modules`, `frontend/dist`, and `backend/.venv`.
+
+<!-- app-workflow:begin -->
+## Shared app workflow
+
+Read `.agents/workflow.json` and use the `app-workflow` skill at `/home/bukka/work/agents/skills/app-workflow/SKILL.md`.
+A bare `N.md` means implement `.iterations/N.md`. Read the requested specification and relevant earlier requirements; preserve later unrequested specs. Missing files are errors, not a request to select another iteration.
+An implementation request authorizes the complete test/build/backup/deploy/verify/commit/push flow unless the user limits it. Run `/home/bukka/work/agents/agent.sh deliver --iteration N.md` after implementation. Include all existing non-secret repository changes, preserve user work, use main, and never force-push.
+Review, explanation, planning, and conversation do not authorize delivery. During ordinary code edits, start or reuse `/home/bukka/work/agents/agent.sh dev start`; publish production only when requested. Report the dev URL.
+Production runs from deployed snapshots. Never restore production databases on pull or deployment; restoration is explicit. Only configured production data snapshots belong in `backups/production/`; uploaded files remain excluded.
+New web apps default to Vite, React, TypeScript, FastAPI, and SQLite, including SQLite JSON/key-value tables when suitable. Existing app stacks remain supported. Authentication is optional for trusted private-tailnet apps.
+<!-- app-workflow:end -->

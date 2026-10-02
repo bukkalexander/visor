@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import re
 import tempfile
 from typing import Any
@@ -9,9 +10,9 @@ import yaml
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT / "data"
+DATA = Path(os.environ.get("VISOR_DATA_DIR", ROOT / "data"))
 SONGS_FILE = DATA / "songs.yaml"
-SCHEMA_FILE = DATA / "songs.schema.yaml"
+SCHEMA_FILE = ROOT / "data" / "songs.schema.yaml"
 PLAYLISTS_FILE = DATA / "playlists.yaml"
 
 

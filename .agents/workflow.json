@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "profile": "web-app",
+  "orc": "../orc",
+  "git": true,
+  "base_path": "/visor/",
+  "name": "visor",
+  "port": 5194,
+  "prepare": [
+    {
+      "argv": [
+        "python3",
+        "-m",
+        "venv",
+        "backend/.venv"
+      ],
+      "cwd": "."
+    },
+    {
+      "argv": [
+        "backend/.venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        "-q",
+        "-r",
+        "backend/requirements.txt"
+      ],
+      "cwd": "."
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "cwd": "frontend"
+    }
+  ],
+  "test": [
+    {
+      "argv": [
+        "backend/.venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "backend/tests",
+        "-v"
+      ],
+      "cwd": "."
+    },
+    {
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "cwd": "frontend"
+    }
+  ],
+  "build": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "frontend"
+    }
+  ],
+  "start": [
+    "./run.sh"
+  ],
+  "data": [
+    {
+      "path": "data",
+      "kind": "directory",
+      "env": "VISOR_DATA_DIR",
+      "seed": ".agents/seeds/data"
+    }
+  ],
+  "dev": {
+    "port": 18090,
+    "processes": [
+      {
+        "argv": [
+          "npm",
+          "exec",
+          "--",
+          "vite",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18090",
+          "--strictPort"
+        ],
+        "cwd": "frontend",
+        "env": {
+          "AGENT_BACKEND_PORT": "18091"
+        }
+      },
+      {
+        "argv": [
+          "backend/.venv/bin/python",
+          "-m",
+          "uvicorn",
+          "backend.main:app",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18091",
+          "--reload"
+        ],
+        "cwd": ".",
+        "env": {
+          "PORT": "18091"
+        }
+      }
+    ],
+    "frontend": "frontend"
+  },
+  "health": "/api/health",
+  "source_data": [
+    "data/songs.schema.yaml"
+  ]
+}

@@ -94,3 +94,9 @@ backend/.venv/bin/python -m unittest discover -s backend/tests -v
 ```
 
 Visor links to YouTube rather than storing recordings. Only public-domain or original sample lyrics are included.
+
+## Shared delivery and development
+
+The app uses `.agents/workflow.json` and the shared tooling in `../agents`. From this repo run `../agents/agent.sh prepare`, `dev start`, `test`, or `deliver --iteration N.md`. Dev runs at a separate private `/dev/<app>/` route with its own data; production runs from a release snapshot. Runtime launchers require dependencies and assets to be prepared first.
+
+`backup` snapshots configured user data and publishes only backup files; `backup --local-only` does not publish. Backups run on delivery/manual request, not on a schedule. `restore DATA_PATH` is explicit; pulling/deploying never restores data. Uploaded files referenced by databases are not backed up. See `../agents/process/README.md` for the full contract.
