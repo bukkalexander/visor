@@ -23,6 +23,9 @@ labels replace remaining English UI copy. External font requests were removed.
 - Emulated mobile touch: focused search; manual playlist creation, order change,
   save/reopen; conversion to dynamic playlist with empty query matching all songs.
   Temporary test playlist removed from isolated development data.
+- Nested-overlay verification: adding a song from lyrics opens an independent
+  focus scope; Escape returns to lyrics, then closes lyrics and unlocks scrolling.
+- Shared agents checks: passed, including 68 browser tests (2 documented skips).
 - Keyboard verification: Tab wraps in filter overlay; Escape restores opener focus;
   catalogue scroll restored after returning from detail.
 - App checks: 4 backend tests and 14 frontend tests passed; TypeScript/Vite build

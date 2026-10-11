@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
 
+const dialogStack: HTMLElement[] = [];
+let originalOverflow = "";
+
 /** Keep keyboard focus inside a focused overlay, and return it to its opener. */
 export function useDialogFocus(
   open: boolean,
@@ -13,8 +16,11 @@ export function useDialogFocus(
     const dialog = document.querySelector<HTMLElement>(selector);
     if (!dialog) return;
     const opener = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!dialogStack.length) {
+      originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
+    dialogStack.push(dialog);
     const controls = () =>
       Array.from(
         dialog.querySelectorAll<HTMLElement>(
@@ -24,6 +30,7 @@ export function useDialogFocus(
     dialog.tabIndex = -1;
     (controls()[0] || dialog).focus();
     const keydown = (event: KeyboardEvent) => {
+      if (dialogStack.at(-1) !== dialog) return;
       if (event.key === "Escape") {
         event.preventDefault();
         close.current();
@@ -56,8 +63,11 @@ export function useDialogFocus(
     document.addEventListener("keydown", keydown);
     return () => {
       document.removeEventListener("keydown", keydown);
-      document.body.style.overflow = previousOverflow;
-      if (opener?.isConnected) opener.focus({ preventScroll: true });
+      const wasTop = dialogStack.at(-1) === dialog;
+      const position = dialogStack.indexOf(dialog);
+      if (position >= 0) dialogStack.splice(position, 1);
+      if (!dialogStack.length) document.body.style.overflow = originalOverflow;
+      if (wasTop && opener?.isConnected) opener.focus({ preventScroll: true });
     };
   }, [open, selector]);
 }
