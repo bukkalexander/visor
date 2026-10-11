@@ -38,8 +38,8 @@ export function chordPitchClasses(chord: string): number[] {
 
 function GuitarDiagram({ chord }: { chord: string }) {
   const shape = shapes[chord];
-  if (!shape) return <div className="unknown-shape">No guitar shape saved</div>;
-  return <svg className="guitar-diagram" viewBox="0 0 112 116" role="img" aria-label={`${chord} guitar chord`}>
+  if (!shape) return <div className="unknown-shape">Gitarrgrepp saknas</div>;
+  return <svg className="guitar-diagram" viewBox="0 0 112 116" role="img" aria-label={`${chord} på gitarr`}>
     {[0, 1, 2, 3, 4, 5].map(string => <line key={`s${string}`} x1={26 + string * 13} y1="22" x2={26 + string * 13} y2="102"/>)}
     {[0, 1, 2, 3, 4, 5].map(fret => <line key={`f${fret}`} x1="26" y1={22 + fret * 16} x2="91" y2={22 + fret * 16}/>) }
     {shape.map((fret, string) => fret === 'x' || fret === 0
@@ -50,7 +50,7 @@ function GuitarDiagram({ chord }: { chord: string }) {
 
 function PianoDiagram({ chord }: { chord: string }) {
   const active = chordPitchClasses(chord);
-  return <div className="piano-diagram" role="img" aria-label={`${chord} piano chord`}>
+  return <div className="piano-diagram" role="img" aria-label={`${chord} på piano`}>
     {Array.from({ length: 12 }, (_, note) => <span key={note} className={`${[1,3,6,8,10].includes(note) ? 'black' : 'white'} ${active.includes(note) ? 'active' : ''}`}/>) }
   </div>;
 }
@@ -59,7 +59,7 @@ function Chord({ name }: { name: string }) {
   const [open, setOpen] = useState(false);
   return <span className="chord-anchor">
     <button className="chord-name" type="button" onClick={() => setOpen(!open)} aria-expanded={open}>{name}</button>
-    {open && <span className="chord-popover"><strong>{name}</strong><span className="diagram-label">Guitar</span><GuitarDiagram chord={name}/><span className="diagram-label">Piano</span><PianoDiagram chord={name}/></span>}
+    {open && <span className="chord-popover"><strong>{name}</strong><span className="diagram-label">Gitarr</span><GuitarDiagram chord={name}/><span className="diagram-label">Piano</span><PianoDiagram chord={name}/></span>}
   </span>;
 }
 
