@@ -29,6 +29,14 @@ items:
     artist:
       type: array
       items: { type: string }
+    album:
+      type: string
+      pattern: \S
+      description: Explicit album title; omit when unknown. Never inferred from universe or tags.
+    track_number:
+      type: integer
+      minimum: 1
+      description: Optional track position on the named album.
     author:
       type: array
       items: { type: string }

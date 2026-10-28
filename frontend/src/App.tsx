@@ -1,236 +1,1205 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { ArrowLeft, BookOpen, Check, ChevronDown, ChevronUp, CirclePlay, Grid2X2, Home, List, ListMusic, Menu, Pause, Play, Plus, RefreshCw, Repeat, Repeat1, Search, Shuffle, SkipBack, SkipForward, Trash2, X } from 'lucide-react';
-import { api } from './api';
-import { useDialogFocus } from './useDialogFocus';
-import { ChordLyrics } from './chords';
-import { nextTrackIndex, shuffledTrackIndex, shouldRecoverPlayback, type RepeatMode } from './playerLogic';
-import { resolvePlaylist } from './playlistLogic';
-import { searchSongs } from './query';
-import type { Page, Playlist, Schema, Song } from './types';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Disc3,
+  Home,
+  Library,
+  ListMusic,
+  Music2,
+  Play,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  UserRound,
+  X,
+  RefreshCw,
+} from "lucide-react";
+import { api } from "./api";
+import Artwork from "./Artwork";
+import SongTable, { songCredit } from "./SongTable";
+import SongDetail from "./SongDetail";
+import Player, { type PlaybackRequest } from "./Player";
+import Playlists from "./Playlists";
+import {
+  albumCollections,
+  artistCollections,
+  collectionForAlbum,
+  type MusicCollection,
+} from "./catalogLogic";
+import { resolvePlaylist } from "./playlistLogic";
+import { searchSongs } from "./query";
+import { videoId } from "./media";
+import { useDialogFocus } from "./useDialogFocus";
+import type { Song, Playlist, Schema } from "./types";
 
-const videoId = (url?: string) => url?.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)?.[1];
-const words = (values?: string[]) => values?.join(', ') || '—';
+type Tab = "songs" | "artists" | "albums" | "playlists";
+type View = {
+  page: "home" | "search" | "library";
+  tab: Tab;
+  collection?: { kind: "artist" | "album"; id: string };
+  playlistId?: string | null;
+};
+type Location = { view: View; scroll: number };
+const tabs: [Tab, string, typeof Music2][] = [
+  ["songs", "Låtar", Music2],
+  ["artists", "Artister", UserRound],
+  ["albums", "Album", Disc3],
+  ["playlists", "Spellistor", ListMusic],
+];
+const filterKeys: (keyof Song)[] = ["artist", "composer", "universe", "tags"];
+const fieldLabel = (field: string) =>
+  ({
+    artist: "Artist",
+    composer: "Kompositör",
+    universe: "Universum",
+    tags: "Taggar",
+  })[field] || field;
+const values = (song: Song, key: keyof Song): string[] => {
+  const v = song[key];
+  return Array.isArray(v) ? v : v == null ? [] : [String(v)];
+};
 
-function SongCard({ song, onOpen, selecting, selected, onSelect, onPlay, onAdd }: { song: Song; onOpen: () => void; selecting: boolean; selected: boolean; onSelect: () => void; onPlay: () => void; onAdd: () => void }) {
-  return <article className={`song-card ${selected ? 'selected' : ''}`}>
-    {selecting && <label className="card-check"><input type="checkbox" checked={selected} onChange={onSelect}/><span><Check/></span></label>}
-    <button className="song-card-open" onClick={selecting ? onSelect : onOpen}>
-      <div className="cover"><span>{song.title.charAt(0)}</span><small>{song.universe?.[0] || 'Visa'}</small></div>
-      <div><h3>{song.title}</h3><p>{words(song.artist || song.composer)}</p><div className="pills">{song.tags?.slice(0, 3).map(tag => <span key={tag}>{tag}</span>)}</div></div>
-    </button><div className="song-actions"><button disabled={!videoId(song.video)} onClick={onPlay} aria-label={`Spela ${song.title}`}><Play/></button><button onClick={onAdd} aria-label={`Lägg till ${song.title} i spellista`}><Plus/></button></div>
-  </article>;
-}
-
-const filterKeys: (keyof Song)[] = ['artist', 'composer', 'universe', 'tags'];
-const fieldLabel = (field: string) => ({ artist: 'Artist', composer: 'Kompositör', universe: 'Universum', tags: 'Taggar' }[field] || field);
-const songValues = (song: Song, field: keyof Song): string[] => { const value = song[field]; return Array.isArray(value) ? value.map(String) : value == null ? [] : [String(value)]; };
-
-function Library({ songs, schema, playlists, reloadPlaylists, onOpen, onPlay, overview, onSearch, onLibrary }: { overview: boolean; onSearch: () => void; onLibrary: () => void; songs: Song[]; schema: Schema; playlists: Playlist[]; reloadPlaylists: () => Promise<void>; onOpen: (song: Song) => void; onPlay: (song: Song) => void }) {
-  const [query, setQuery] = useState(''); const [layout, setLayout] = useState<'cards' | 'table'>('table'); const [drawer, setDrawer] = useState(false); const [sort, setSort] = useState('title:asc');
-  const [filters, setFilters] = useState<Record<string, string[]>>({}); const [selecting, setSelecting] = useState(false); const [selected, setSelected] = useState<Set<string>>(new Set()); const [playlistSheet, setPlaylistSheet] = useState(false); const [newName, setNewName] = useState(''); const [targetPlaylist, setTargetPlaylist] = useState(playlists.find(list => list.type !== 'dynamic')?.id || ''); const [saving, setSaving] = useState(false); const [actionError, setActionError] = useState('');
-  useDialogFocus(drawer, '.filter-drawer.open', () => setDrawer(false));
-  useDialogFocus(playlistSheet, '.library-page .playlist-sheet', () => setPlaylistSheet(false));
-  const manualPlaylists = playlists.filter(playlist => playlist.type !== 'dynamic');
-  useEffect(() => { if (!targetPlaylist && manualPlaylists[0]) setTargetPlaylist(manualPlaylists[0].id); }, [manualPlaylists, targetPlaylist]);
-  const fields = useMemo(() => Object.keys(schema.items.properties), [schema]);
-  const facets = useMemo(() => Object.fromEntries(filterKeys.map(field => [field, Array.from(new Set(songs.flatMap(song => songValues(song, field)))).sort((a, b) => a.localeCompare(b))])), [songs]);
-  const result = useMemo(() => {
-    try {
-      const queried = searchSongs(songs, query, fields).filter(song => Object.entries(filters).every(([field, values]) => !values.length || values.some(value => songValues(song, field as keyof Song).includes(value))));
-      const [key, direction] = sort.split(':');
-      queried.sort((a, b) => { const left = key === 'year' ? a.year || 0 : String(a[key as keyof Song] || ''); const right = key === 'year' ? b.year || 0 : String(b[key as keyof Song] || ''); return (typeof left === 'number' && typeof right === 'number' ? left - right : String(left).localeCompare(String(right))) * (direction === 'desc' ? -1 : 1); });
-      return { songs: queried, error: '' };
-    } catch (error) { return { songs: [], error: (error as Error).message }; }
-  }, [songs, query, fields, filters, sort]);
-  const toggleFilter = (field: string, value: string) => setFilters(current => { const values = new Set(current[field] || []); if (values.has(value)) values.delete(value); else values.add(value); return { ...current, [field]: [...values] }; });
-  const toggleSong = (id: string) => setSelected(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
-  const allVisibleSelected = result.songs.length > 0 && result.songs.every(song => selected.has(song.id));
-  const toggleAll = () => setSelected(current => { const next = new Set(current); if (allVisibleSelected) result.songs.forEach(song => next.delete(song.id)); else result.songs.forEach(song => next.add(song.id)); return next; });
-  const finishSelection = () => { setSelecting(false); setSelected(new Set()); setPlaylistSheet(false); };
-  const addToPlaylist = async (create: boolean) => {
-    setSaving(true); setActionError('');
-    try {
-      if (create) await api.createPlaylist({ name: newName.trim(), description: '', type: 'manual', song_ids: [...selected] });
-      else { const playlist = manualPlaylists.find(item => item.id === targetPlaylist); if (!playlist) throw new Error('Välj en manuell spellista'); await api.updatePlaylist({ ...playlist, type: 'manual', song_ids: [...new Set([...(playlist.song_ids || []), ...selected])] }); }
-      await reloadPlaylists(); finishSelection();
-    } catch (error) { setActionError((error as Error).message); } finally { setSaving(false); }
-  };
-  const activeFilterCount = Object.values(filters).filter(values => values.length).length;
-  return <main className="page library-page">
-    <header className="catalog-heading"><div><span className="eyebrow">Visarkivet</span><h1>{overview ? 'Din musik, samlad' : 'Sök låtar'}</h1></div><span className="catalog-count">{songs.length} låtar</span></header>
-    {overview && <section className="overview-strip"><div><BookOpen/><span><strong>Text, ackord och musik</strong><small>Hitta en visa och ta den med dig.</small></span></div><button onClick={onLibrary}><ListMusic/><span><strong>Dina spellistor</strong><small>{playlists.length} samlingar</small></span><ChevronDown/></button></section>}
-    <header className="search-header">
-      <button className={`layout-toggle ${activeFilterCount ? 'active' : ''}`} onClick={() => setDrawer(true)} aria-label="Öppna filter"><Menu/>{activeFilterCount > 0 && <b>{activeFilterCount}</b>}</button>
-      <label className="search-box"><Search size={19}/><input value={query} onChange={event => setQuery(event.target.value)} onFocus={onSearch} placeholder='Sök titel, artist eller tagg' aria-label="Sök låtar"/>{query && <button onClick={() => setQuery('')} aria-label="Rensa sökning"><X size={17}/></button>}</label>
-      <button className="layout-toggle" onClick={() => setLayout(layout === 'cards' ? 'table' : 'cards')} aria-label={`Visa som ${layout === 'cards' ? 'lista' : 'kort'}`}>{layout === 'cards' ? <List/> : <Grid2X2/>}</button>
-    </header>
-    {result.error && <div className="inline-error" role="alert"><strong>Ogiltig sökning</strong><span>{result.error}</span></div>}
-    <div className="result-line"><span>{overview ? 'Alla låtar' : `${result.songs.length} träffar`}</span><button className={selecting ? 'active' : ''} onClick={() => selecting ? finishSelection() : setSelecting(true)}>{selecting ? 'Avbryt' : 'Välj låtar'}</button></div>
-    {selecting && <div className="selection-bar"><label><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll}/><span><Check/></span> Alla visade</label><strong>{selected.size} valda</strong><button disabled={!selected.size} onClick={() => setPlaylistSheet(true)}>Lägg till i spellista</button></div>}
-    {layout === 'cards' ? <section className="card-grid">{result.songs.map(song => <SongCard key={song.id} song={song} onOpen={() => onOpen(song)} selecting={selecting} selected={selected.has(song.id)} onSelect={() => toggleSong(song.id)} onPlay={() => onPlay(song)} onAdd={() => { setSelected(new Set([song.id])); setPlaylistSheet(true); }}/>)}</section> :
-      <div className="table-wrap song-table"><table><thead><tr>{selecting && <th className="check-column"><label className="table-checkbox"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} aria-label="Välj alla visade låtar"/></label></th>}<th className="title-column">Titel</th><th className="artist-column">Artist / kompositör</th><th className="extra-column">Universum</th><th className="extra-column">Taggar</th><th className="extra-column">År</th><th>Åtgärder</th></tr></thead><tbody>{result.songs.map(song => <tr key={song.id} className={selected.has(song.id) ? 'selected' : ''}>{selecting && <td><label className="table-checkbox"><input type="checkbox" checked={selected.has(song.id)} onChange={() => toggleSong(song.id)} aria-label={`Välj ${song.title}`}/></label></td>}<td className="title-column"><button onClick={selecting ? () => toggleSong(song.id) : () => onOpen(song)}><span className="row-monogram" aria-hidden="true">{song.title.charAt(0)}</span><span>{song.title}<small className="mobile-artist">{words(song.artist || song.composer)}</small></span></button></td><td className="artist-column">{words(song.artist || song.composer)}</td><td className="extra-column">{words(song.universe)}</td><td className="extra-column">{words(song.tags)}</td><td className="extra-column">{song.year || '—'}</td><td><div className="song-actions"><button disabled={!videoId(song.video)} onClick={() => onPlay(song)} aria-label={`Spela ${song.title}`}><Play/></button><button onClick={() => { setSelected(new Set([song.id])); setPlaylistSheet(true); }} aria-label={`Lägg till ${song.title} i spellista`}><Plus/></button></div></td></tr>)}</tbody></table></div>}
-    {!result.songs.length && !result.error && <div className="empty"><Search/><h2>Inga låtar hittades</h2></div>}
-    <div className={`drawer-backdrop ${drawer ? 'open' : ''}`} onClick={() => setDrawer(false)}/><aside className={`filter-drawer ${drawer ? 'open' : ''}`} role="dialog" aria-modal={drawer || undefined} aria-label="Filter och sortering" aria-hidden={!drawer}><header><div><span>Bibliotek</span><h2>Filter och sortering</h2></div><button onClick={() => setDrawer(false)} aria-label="Stäng filter"><X/></button></header><label className="sort-field"><span>Sortering</span><select value={sort} onChange={event => setSort(event.target.value)}><option value="title:asc">Titel A–Ö</option><option value="title:desc">Titel Ö–A</option><option value="year:desc">Senaste år</option><option value="year:asc">Tidigaste år</option></select></label>{filterKeys.map(field => <details key={field} open><summary>{fieldLabel(field)} <small>{filters[field]?.length || ''}</small></summary><div>{facets[field].map(value => <label key={value}><input type="checkbox" checked={(filters[field] || []).includes(value)} onChange={() => toggleFilter(field, value)}/><span><Check/></span>{value}</label>)}</div></details>)}<footer><button onClick={() => setFilters({})}>Rensa</button><button onClick={() => setDrawer(false)}>Visa {result.songs.length} låtar</button></footer></aside>
-    {playlistSheet && <div className="modal-backdrop" onClick={() => setPlaylistSheet(false)}><section className="playlist-sheet" role="dialog" aria-modal="true" aria-label="Lägg till i spellista" onClick={event => event.stopPropagation()}><header><h2>Lägg till {selected.size} låtar</h2><button aria-label="Stäng" onClick={() => setPlaylistSheet(false)}><X/></button></header>{actionError && <div className="inline-error" role="alert">{actionError}</div>}{manualPlaylists.length > 0 && <><label className="field"><span>Befintlig manuell spellista</span><select value={targetPlaylist} onChange={event => setTargetPlaylist(event.target.value)}>{manualPlaylists.map(list => <option value={list.id} key={list.id}>{list.name}</option>)}</select></label><button className="primary-action" disabled={saving || !targetPlaylist} onClick={() => addToPlaylist(false)}>{saving ? 'Sparar…' : 'Lägg till'}</button><div className="or"><span>eller skapa ny</span></div></>}<label className="field"><span>Spellistans namn</span><input value={newName} onChange={event => setNewName(event.target.value)}/></label><button className="secondary-action" disabled={saving || !newName.trim()} onClick={() => addToPlaylist(true)}>Skapa spellista</button></section></div>}
-  </main>;
-}
-
-function SongDetail({ song, onBack, onPlay, onAdd, embedded = false }: { song: Song; onBack: () => void; onPlay?: () => void; onAdd?: () => void; embedded?: boolean }) {
-  const id = videoId(song.video);
-  const metadata = [['Artist', words(song.artist)], ['Textförfattare', words(song.author)], ['Kompositör', words(song.composer)], ['Universum', words(song.universe)], ['Taggar', words(song.tags)], ['År', song.year || '—']];
-  return <main className="page detail-page">
-    <header className="detail-header"><button onClick={onBack}><ArrowLeft/> {embedded ? 'Stäng låttext' : 'Låtar'}</button></header>
-    <article>
-      <div className="article-title"><span>{song.universe?.[0] || 'Visa'}</span><h1>{song.title}</h1><p>{words(song.artist || song.composer)}</p></div>
-      {id && !embedded && <div className="video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${id}`} title={`${song.title} video`} allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/></div>}
-      <div className="song-actions">{onPlay && <button disabled={!id} onClick={onPlay}><Play/> Spela</button>}{onAdd && <button onClick={onAdd}><Plus/> Lägg till i spellista</button>}</div>
-      {song.description && <section className="markdown"><ReactMarkdown>{song.description}</ReactMarkdown></section>}
-      <dl className="metadata">{metadata.map(([label, value]) => <div key={String(label)}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-      {song.lyrics && <section className="lyrics"><h2>Låttext</h2>{/\[[A-G][^\]]*]/.test(song.lyrics) ? <ChordLyrics lyrics={song.lyrics}/> : <ReactMarkdown>{song.lyrics}</ReactMarkdown>}</section>}
+function CollectionCard({
+  collection,
+  onOpen,
+  onPlay,
+}: {
+  collection: MusicCollection;
+  onOpen: () => void;
+  onPlay: () => void;
+}) {
+  return (
+    <article className={`collection-card ${collection.kind}-card`}>
+      <button className="collection-open" onClick={onOpen}>
+        <Artwork title={collection.name} kind={collection.kind} />
+        <h3>{collection.name}</h3>
+        <p>{collection.subtitle}</p>
+      </button>
+      <button
+        className="card-play"
+        disabled={!collection.songs.some((song) => videoId(song.video))}
+        aria-label={`Spela ${collection.name}`}
+        onClick={onPlay}
+      >
+        <Play fill="currentColor" />
+      </button>
     </article>
-  </main>;
-}
-
-
-type Draft = { id?: string; name: string; description: string; type: 'manual' | 'dynamic'; song_ids: string[]; query: string };
-const emptyDraft: Draft = { name: '', description: '', type: 'manual', song_ids: [], query: '' };
-
-function PlaylistComposer({ songs, schema, playlists, reload, onPlay }: { songs: Song[]; schema: Schema; playlists: Playlist[]; reload: () => Promise<void>; onPlay: (list: Playlist) => void }) {
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [songQuery, setSongQuery] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const fields = useMemo(() => Object.keys(schema.items.properties), [schema]);
-  const resolve = (playlist: Playlist) => { try { return { songs: resolvePlaylist(playlist, songs, fields), error: '' }; } catch (caught) { return { songs: [], error: (caught as Error).message }; } };
-  const preview = draft?.type === 'dynamic' ? resolve({ id: draft.id || '', name: draft.name, type: 'dynamic', query: draft.query }).songs : [];
-  const queryError = draft?.type === 'dynamic' ? resolve({ id: draft.id || '', name: draft.name, type: 'dynamic', query: draft.query }).error : '';
-  const save = async () => {
-    if (!draft) return; setBusy(true); setError('');
-    try {
-      const payload: Playlist = draft.type === 'dynamic'
-        ? { id: draft.id || '', name: draft.name, description: draft.description, type: 'dynamic', query: draft.query }
-        : { id: draft.id || '', name: draft.name, description: draft.description, type: 'manual', song_ids: draft.song_ids };
-      if (draft.id) await api.updatePlaylist(payload); else await api.createPlaylist(payload);
-      await reload(); setDraft(null);
-    } catch (caught) { setError((caught as Error).message); } finally { setBusy(false); }
-  };
-  const remove = async (id: string) => { if (!window.confirm('Ta bort den här spellistan?')) return; try { await api.deletePlaylist(id); await reload(); setError(''); } catch (caught) { setError((caught as Error).message); } };
-  const move = (index: number, direction: -1 | 1) => {
-    if (!draft) return; const next = [...draft.song_ids]; const target = index + direction;
-    if (target < 0 || target >= next.length) return; [next[index], next[target]] = [next[target], next[index]]; setDraft({ ...draft, song_ids: next });
-  };
-  if (draft) return <main className="page composer-page">
-    <header className="editor-head"><button aria-label="Stäng redigering" onClick={() => setDraft(null)}><X/></button><h1>{draft.id ? 'Redigera spellista' : 'Ny spellista'}</h1><button className="save" disabled={busy || !draft.name.trim() || !!queryError} onClick={save}>{busy ? 'Sparar…' : 'Spara'}</button></header>
-    {error && <div className="inline-error" role="alert">{error}</div>}
-    <label className="field"><span>Namn</span><input value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })}/></label>
-    <label className="field"><span>Beskrivning</span><textarea value={draft.description} onChange={event => setDraft({ ...draft, description: event.target.value })}/></label>
-    <div className="playlist-type" role="group" aria-label="Typ av spellista"><button className={draft.type === 'manual' ? 'active' : ''} onClick={() => setDraft({ ...draft, type: 'manual' })}>Valda låtar</button><button className={draft.type === 'dynamic' ? 'active' : ''} onClick={() => setDraft({ ...draft, type: 'dynamic' })}>Sparad sökning</button></div>
-    {draft.type === 'dynamic' ? <>
-      <label className="field query-field"><span>Sökfilter</span><input value={draft.query} onChange={event => setDraft({ ...draft, query: event.target.value })} placeholder='tags = "bedtime"'/><small>Lämna tomt för att inkludera alla låtar.</small></label>
-      {queryError ? <div className="inline-error" role="alert"><strong>Ogiltig sökning</strong>{queryError}</div> : <><h2 className="subhead">Träffar · {preview.length}</h2><div className="dynamic-preview">{preview.map(song => <div key={song.id}><strong>{song.title}</strong><small>{words(song.artist || song.composer)}</small></div>)}</div></>}
-    </> : <>
-      <h2 className="subhead">Låtar · {draft.song_ids.length}</h2>
-      <div className="selected-tracks">{draft.song_ids.map((id, index) => { const song = songs.find(item => item.id === id); return song ? <div key={id}><span>{index + 1}</span><strong>{song.title}</strong><button onClick={() => move(index, -1)} aria-label="Flytta upp"><ChevronUp/></button><button onClick={() => move(index, 1)} aria-label="Flytta ner"><ChevronDown/></button><button onClick={() => setDraft({ ...draft, song_ids: draft.song_ids.filter(item => item !== id) })} aria-label="Ta bort låt"><X/></button></div> : null; })}</div>
-      <h2 className="subhead">Lägg till låtar</h2><label className="search-box"><Search/><input aria-label="Sök låtar till spellistan" placeholder="Sök låtar till spellistan" value={songQuery} onChange={event => setSongQuery(event.target.value)}/></label>
-      <div className="song-checks">{songs.filter(song => !draft.song_ids.includes(song.id) && `${song.title} ${words(song.artist)} ${words(song.composer)}`.toLocaleLowerCase().includes(songQuery.toLocaleLowerCase())).map(song => <button key={song.id} onClick={() => setDraft({ ...draft, song_ids: [...draft.song_ids, song.id] })}><Plus/><span><strong>{song.title}</strong><small>{words(song.artist || song.composer)}</small></span></button>)}</div>
-    </>}
-  </main>;
-  return <main className="page playlists-page"><header className="page-title action-title"><div><span>Samlingar</span><h1>Spellistor</h1></div><button onClick={() => setDraft({ ...emptyDraft })}><Plus/> Ny</button></header>{error && <div className="inline-error" role="alert">{error}</div>}{!playlists.length && <div className="empty"><ListMusic/><h2>Inga spellistor ännu</h2><p>Skapa en spellista eller spara en sökning.</p></div>}<section className="playlist-grid">{playlists.map(list => { const result = resolve(list); const materialized = { ...list, song_ids: result.songs.map(song => song.id) }; return <article key={list.id}><div className="playlist-art"><ListMusic/><span>{result.songs.length}</span>{list.type === 'dynamic' && <b>Sparad sökning</b>}</div><h2>{list.name}</h2><p>{result.error || list.description || (list.type === 'dynamic' ? list.query || 'Alla låtar' : `${result.songs.length} låtar`)}</p><div><button className="play" onClick={() => onPlay(materialized)} disabled={!!result.error || !result.songs.some(song => videoId(song.video))}><Play/> Spela</button><button onClick={() => setDraft({ id: list.id, name: list.name, description: list.description || '', type: list.type === 'dynamic' ? 'dynamic' : 'manual', song_ids: list.song_ids || [], query: list.query || '' })}>Öppna</button><button onClick={() => remove(list.id)} aria-label={`Ta bort ${list.name}`}><Trash2/></button></div></article>; })}</section></main>;
-}
-
-declare global { interface Window { YT?: { Player: new (element: HTMLElement, options: object) => YouTubePlayer; PlayerState: { ENDED: number; PLAYING: number; PAUSED: number; BUFFERING: number; CUED: number; UNSTARTED: number } }; onYouTubeIframeAPIReady?: () => void; } }
-type YouTubePlayer = { loadVideoById(id: string): void; playVideo(): void; pauseVideo(): void; seekTo(seconds: number, allowSeekAhead: boolean): void; getCurrentTime(): number; getDuration(): number; getPlayerState(): number; destroy(): void };
-
-function PlayerPage({ songs, playlist, expanded, onExpand, onAdd }: { songs: Song[]; playlist?: Playlist; expanded: boolean; onExpand: () => void; onAdd: (song: Song) => void }) {
-  const playable = useMemo(() => (playlist?.song_ids || []).map(id => songs.find(song => song.id === id)).filter((song): song is Song => !!videoId(song?.video)), [playlist, songs]);
-  const [lyricsOpen, setLyricsOpen] = useState(false);
-  useDialogFocus(lyricsOpen, '.playing-lyrics', () => setLyricsOpen(false));
-  const [index, setIndex] = useState(0); const [repeat, setRepeat] = useState<RepeatMode>('off'); const [shuffle, setShuffle] = useState(false); const [playing, setPlaying] = useState(false); const [time, setTime] = useState(0); const [duration, setDuration] = useState(0); const [ready, setReady] = useState(false);
-  const host = useRef<HTMLDivElement>(null); const player = useRef<YouTubePlayer | undefined>(undefined); const playableRef = useRef(playable); const indexRef = useRef(index); const repeatRef = useRef(repeat); const shuffleRef = useRef(shuffle); const desiredPlaying = useRef(true); const transitionStarted = useRef(0); const lastCommand = useRef(0); const endedTrack = useRef(''); const goRef = useRef<(direction: 1 | -1) => void>(() => undefined); const current = playable[index];
-  playableRef.current = playable; indexRef.current = index; repeatRef.current = repeat; shuffleRef.current = shuffle;
-  const commandPlay = useCallback(() => { desiredPlaying.current = true; lastCommand.current = Date.now(); player.current?.playVideo(); }, []);
-  const commandPause = useCallback(() => { desiredPlaying.current = false; lastCommand.current = Date.now(); player.current?.pauseVideo(); }, []);
-  const go = useCallback((direction: 1 | -1) => {
-    const list = playableRef.current; const currentIndex = indexRef.current;
-    if (!list.length) return;
-    endedTrack.current = list[currentIndex]?.id || '';
-    const next = shuffleRef.current && direction === 1 ? shuffledTrackIndex(currentIndex, list.length) : nextTrackIndex(currentIndex, list.length, direction, repeatRef.current);
-    if (next === currentIndex) { player.current?.seekTo(0, true); commandPlay(); return; }
-    if (next == null) { commandPause(); return; }
-    desiredPlaying.current = true; transitionStarted.current = Date.now(); setIndex(next);
-  }, [commandPause, commandPlay]);
-  goRef.current = go;
-  useEffect(() => { setIndex(0); indexRef.current = 0; desiredPlaying.current = true; transitionStarted.current = Date.now(); endedTrack.current = ''; }, [playlist]);
-  useEffect(() => {
-    if (!host.current) return;
-    let cancelled = false;
-    const start = () => {
-      if (cancelled || !host.current || !window.YT || player.current) return;
-      player.current = new window.YT.Player(host.current, { playerVars: { playsinline: 1, rel: 0 }, events: {
-        onReady: () => { if (!cancelled) setReady(true); },
-        onStateChange: (event: { data: number }) => {
-          const states = window.YT?.PlayerState; if (!states) return;
-          if (event.data === states.PLAYING) { desiredPlaying.current = true; setPlaying(true); }
-          else if (event.data === states.PAUSED) { setPlaying(false); if (Date.now() - transitionStarted.current > 2500) desiredPlaying.current = false; }
-          else if (event.data === states.ENDED) { setPlaying(false); goRef.current(1); }
-        }
-      }});
-    };
-    if (window.YT) start(); else { window.onYouTubeIframeAPIReady = start; if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) { const script = document.createElement('script'); script.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(script); } }
-    return () => { cancelled = true; player.current?.destroy(); player.current = undefined; };
-  }, []);
-  useEffect(() => {
-    const id = videoId(playable[indexRef.current]?.video); if (!ready || !id || !player.current) return;
-    transitionStarted.current = Date.now(); endedTrack.current = ''; setTime(0); setDuration(0); player.current.loadVideoById(id);
-    const retries = [250, 900, 1900].map(delay => window.setTimeout(() => { if (desiredPlaying.current && indexRef.current === index) commandPlay(); }, delay));
-    return () => retries.forEach(clearTimeout);
-  }, [current?.id, ready, index, commandPlay, playlist]);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      const instance = player.current; const states = window.YT?.PlayerState; if (!instance || !states) return;
-      const nextTime = instance.getCurrentTime() || 0; const nextDuration = instance.getDuration() || 0; const state = instance.getPlayerState();
-      setTime(nextTime); setDuration(nextDuration); setPlaying(state === states.PLAYING);
-      if (shouldRecoverPlayback(desiredPlaying.current, state, states.PLAYING, states.BUFFERING) && Date.now() - lastCommand.current > 1200) commandPlay();
-      if (!desiredPlaying.current && (state === states.PLAYING || state === states.BUFFERING) && Date.now() - lastCommand.current > 500) commandPause();
-      if (current && nextDuration > 2 && nextTime >= nextDuration - .65 && endedTrack.current !== current.id) { endedTrack.current = current.id; goRef.current(1); }
-    }, 700);
-    return () => clearInterval(timer);
-  }, [current, commandPause, commandPlay]);
-  const seek = (seconds: number) => player.current?.seekTo(Math.max(0, Math.min(duration, time + seconds)), true);
-  const chooseTrack = (songIndex: number) => { desiredPlaying.current = true; transitionStarted.current = Date.now(); endedTrack.current = ''; if (songIndex === indexRef.current) { player.current?.seekTo(0, true); commandPlay(); } else setIndex(songIndex); };
-  const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
-  if (!current) return <main className="page player-page empty-player"><CirclePlay/><h1>Ingen låt vald</h1><p>Spela en låt eller spellista för att börja.</p></main>;
-  return <main className={`page player-page persistent-player ${expanded ? 'expanded' : 'compact'}`}><div className="mini-player"><button onClick={onExpand}><strong>{current.title}</strong><small>{words(current.artist || current.composer)}</small></button><button onClick={() => go(-1)} aria-label="Föregående låt"><SkipBack/></button><button onClick={() => desiredPlaying.current ? commandPause() : commandPlay()} aria-label={playing ? 'Pausa' : 'Spela'}>{playing ? <Pause/> : <Play/>}</button><button onClick={() => go(1)} aria-label="Nästa låt"><SkipForward/></button><button aria-expanded={lyricsOpen} onClick={() => setLyricsOpen(!lyricsOpen)} aria-label="Visa låttext"><BookOpen/></button></div>{lyricsOpen && <div className="playing-lyrics" role="dialog" aria-modal="true" aria-label="Låttext och metadata"><SongDetail song={current} embedded onBack={() => setLyricsOpen(false)} onAdd={() => onAdd(current)}/>{!current.lyrics && <p>Låttext saknas för den här låten.</p>}</div>}<header className="now-head"><span>Spelas nu</span><strong>{playlist?.name}</strong></header><div className="player-stage"><div ref={host} className="youtube-host"/><button className="tap-zone left" onDoubleClick={() => seek(-10)} aria-label="Dubbeltryck för att spola tillbaka 10 sekunder"/><button className="tap-zone right" onDoubleClick={() => seek(30)} aria-label="Dubbeltryck för att spola fram 30 sekunder"/></div><section className="track-info"><span>{index + 1} / {playable.length}</span><h1>{current.title}</h1><p>{words(current.artist || current.composer)}</p></section><div className="timeline"><input type="range" min="0" max={duration || 1} value={time} onChange={event => { const value = Number(event.target.value); setTime(value); player.current?.seekTo(value, true); }} aria-label="Position i låten"/><div><span>{clock(time)}</span><span>-{clock(Math.max(0, duration - time))}</span></div></div><div className="transport"><button className={shuffle ? 'active' : ''} onClick={() => setShuffle(!shuffle)} aria-label="Blanda låtar" aria-pressed={shuffle}><Shuffle/></button><button onClick={() => go(-1)} aria-label="Föregående låt"><SkipBack/></button><button className="main-play" onClick={() => desiredPlaying.current ? commandPause() : commandPlay()} aria-label={playing ? 'Pausa' : 'Spela'}>{playing ? <Pause/> : <Play/>}</button><button onClick={() => go(1)} aria-label="Nästa låt"><SkipForward/></button><button className={repeat !== 'off' ? 'active' : ''} onClick={() => setRepeat(repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off')} aria-label={`Upprepning: ${repeat === 'off' ? 'av' : repeat === 'one' ? 'en låt' : 'alla låtar'}`} aria-pressed={repeat !== 'off'}>{repeat === 'one' ? <Repeat1/> : <Repeat/>}</button></div><div className="up-next"><h2>Nästa låtar</h2>{playable.map((song, songIndex) => <button className={songIndex === index ? 'active' : ''} key={song.id} onClick={() => chooseTrack(songIndex)}><span>{songIndex + 1}</span><span><strong>{song.title}</strong><small>{words(song.artist || song.composer)}</small></span></button>)}</div></main>;
-}
-
-function Navigation({ page, setPage }: { page: Page; setPage: (page: Page) => void }) {
-  const items: [Page, string, typeof Home][] = [['library', 'Hem', Home], ['songs', 'Sök', Search], ['playlists', 'Bibliotek', ListMusic], ['player', 'Spelare', CirclePlay]];
-  return <nav className="bottom-nav" aria-label="Huvudnavigation"><div className="brand"><span>V</span><strong>Visor<small>Ditt visarkiv</small></strong></div>{items.map(([id, label, Icon]) => <button key={id} aria-current={page === id ? 'page' : undefined} className={page === id ? 'active' : ''} onClick={() => setPage(id)}><Icon/><span>{label}</span></button>)}</nav>;
+  );
 }
 
 export default function App() {
-  const [songs, setSongs] = useState<Song[]>([]); const [schema, setSchema] = useState<Schema>(); const [playlists, setPlaylists] = useState<Playlist[]>([]); const [page, setPage] = useState<Page>('library'); const [selected, setSelected] = useState<Song>(); const [activePlaylist, setActivePlaylist] = useState<Playlist>(); const [error, setError] = useState<{ message: string; details?: string[] }>(); const [loading, setLoading] = useState(true);
-  const loadCatalog = useCallback(async () => { setLoading(true); setError(undefined); try { const data = await api.catalog(); setSongs(data.songs); setSchema(data.schema); } catch (caught) { const value = caught as Error & { details?: string[] }; setError({ message: value.message, details: value.details }); } finally { setLoading(false); } }, []);
-  const loadPlaylists = useCallback(async () => { try { setPlaylists((await api.playlists()).playlists); } catch (caught) { const value = caught as Error; setError({ message: value.message }); } }, []);
-  useEffect(() => { loadCatalog(); loadPlaylists(); }, [loadCatalog, loadPlaylists]);
-  const [addingSong, setAddingSong] = useState<Song>(); const [addName, setAddName] = useState(''); const [addError, setAddError] = useState(''); const [adding, setAdding] = useState(false);
-  useDialogFocus(!!addingSong, '.app-shell > .modal-backdrop .playlist-sheet', () => setAddingSong(undefined));
-  const playSong = (song: Song) => setActivePlaylist({ id: `song-${song.id}`, name: song.title, type: 'manual', song_ids: [song.id] });
-  const addSong = async (list?: Playlist) => { if (!addingSong) return; setAdding(true); setAddError(''); try { if (list) await api.updatePlaylist({ ...list, song_ids: [...new Set([...(list.song_ids || []), addingSong.id])] }); else await api.createPlaylist({ name: addName.trim(), type: 'manual', song_ids: [addingSong.id] }); await loadPlaylists(); setAddingSong(undefined); setAddName(''); } catch (caught) { setAddError((caught as Error).message); } finally { setAdding(false); } };
-  const viewScroll = useRef<Partial<Record<Page, number>>>({});
-  const catalogueScroll = useRef(0);
-  const openSong = (song: Song) => { catalogueScroll.current = window.scrollY; setSelected(song); window.scrollTo(0, 0); };
-  const closeSong = () => { setSelected(undefined); requestAnimationFrame(() => window.scrollTo(0, catalogueScroll.current)); };
-  if (loading) return <div className="loading"><span>V</span></div>;
-  if (error || !schema) return <main className="fatal"><div>!</div><h1>Visarkivet kunde inte laddas</h1><p>{error?.message || 'Okänt schemafel'}</p>{error?.details?.length && <pre>{error.details.join('\n')}</pre>}<button onClick={loadCatalog}><RefreshCw/> Försök igen</button></main>;
-  return <div className={`app-shell ${activePlaylist ? 'has-player' : ''}`}>
-    <div hidden={!['library', 'songs'].includes(page) || !!selected}><Library overview={page === 'library'} onSearch={() => setPage('songs')} onLibrary={() => setPage('playlists')} songs={songs} schema={schema} playlists={playlists} reloadPlaylists={loadPlaylists} onOpen={openSong} onPlay={playSong}/></div>
-    {selected && ['library', 'songs'].includes(page) && <SongDetail song={selected} onBack={closeSong} onPlay={() => playSong(selected)} onAdd={() => { setAddError(''); setAddingSong(selected); }}/>}
-    <div hidden={page !== 'playlists'}><PlaylistComposer songs={songs} schema={schema} playlists={playlists} reload={loadPlaylists} onPlay={setActivePlaylist}/></div>
-    {activePlaylist && <PlayerPage songs={songs} playlist={activePlaylist} expanded={page === 'player'} onExpand={() => setPage(page === 'player' ? 'library' : 'player')} onAdd={song => { setAddError(''); setAddingSong(song); }}/>}
-    {page === 'player' && !activePlaylist && <main className="page empty"><CirclePlay/><h1>Ingen låt vald</h1><p>Spela en låt eller spellista för att börja.</p></main>}
-    {addingSong && <div className="modal-backdrop"><section className="playlist-sheet" role="dialog" aria-modal="true" aria-label="Lägg till i spellista"><header><h2>{addingSong.title}</h2><button aria-label="Stäng" onClick={() => setAddingSong(undefined)}><X/></button></header>{addError && <p role="alert">{addError}</p>}{playlists.filter(list => list.type !== 'dynamic').map(list => <button className="secondary-action" disabled={adding} key={list.id} onClick={() => addSong(list)}>{list.name}</button>)}<label className="field"><span>Ny spellista</span><input value={addName} onChange={event => setAddName(event.target.value)}/></label><button className="primary-action" disabled={adding || !addName.trim()} onClick={() => addSong()}>{adding ? 'Sparar…' : 'Skapa och lägg till'}</button></section></div>}
-    <Navigation page={page} setPage={next => { viewScroll.current[page] = window.scrollY; setPage(next); requestAnimationFrame(() => window.scrollTo(0, viewScroll.current[next] || 0)); }}/>
-  </div>;
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [schema, setSchema] = useState<Schema>();
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [playlistError, setPlaylistError] = useState("");
+  const [view, setView] = useState<View>({ page: "home", tab: "songs" });
+  const [past, setPast] = useState<Location[]>([]);
+  const [future, setFuture] = useState<Location[]>([]);
+  const scrollPositions = useRef(new Map<string, number>());
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("title");
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedSong, setSelectedSong] = useState<Song>();
+  const [request, setRequest] = useState<PlaybackRequest>();
+  const [playerExpanded, setPlayerExpanded] = useState(false);
+  const [currentSong, setCurrentSong] = useState<Song>();
+  const [createSignal, setCreateSignal] = useState(0);
+  const [addingSongs, setAddingSongs] = useState<Song[]>([]);
+  const [addName, setAddName] = useState("");
+  const [listQuery, setListQuery] = useState("");
+  const [addError, setAddError] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [notice, setNotice] = useState("");
+  const playerScroll = useRef(0);
+  const searchInput = useRef<HTMLInputElement>(null);
+
+  const loadPlaylists = useCallback(async () => {
+    try {
+      setPlaylists((await api.playlists()).playlists);
+      setPlaylistError("");
+    } catch (caught) {
+      setPlaylistError((caught as Error).message);
+      throw caught;
+    }
+  }, []);
+  const loadCatalog = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await api.catalog();
+      setSongs(result.songs);
+      setSchema(result.schema);
+    } catch (caught) {
+      const err = caught as Error & { details?: string[] };
+      setError([err.message, ...(err.details || [])].join("\n"));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void loadCatalog();
+    void loadPlaylists().catch(() => undefined);
+  }, [loadCatalog, loadPlaylists]);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  useDialogFocus(filterOpen, ".filter-dialog", () => setFilterOpen(false));
+  useDialogFocus(addingSongs.length > 0, ".add-playlist-dialog", () => {
+    if (!adding) setAddingSongs([]);
+  });
+
+  const navigate = (next: View) => {
+    setPlayerExpanded(false);
+    if (JSON.stringify(next) === JSON.stringify(view)) return;
+    scrollPositions.current.set(JSON.stringify(view), window.scrollY);
+    setPast((current) => [...current, { view, scroll: window.scrollY }]);
+    setFuture([]);
+    setView(next);
+    requestAnimationFrame(() =>
+      window.scrollTo(
+        0,
+        scrollPositions.current.get(JSON.stringify(next)) || 0,
+      ),
+    );
+  };
+  const travel = (direction: -1 | 1) => {
+    const history = direction === -1 ? past : future;
+    const target = history.at(-1);
+    if (!target) return;
+    const current = { view, scroll: window.scrollY };
+    if (direction === -1) {
+      setPast(past.slice(0, -1));
+      setFuture([...future, current]);
+    } else {
+      setFuture(future.slice(0, -1));
+      setPast([...past, current]);
+    }
+    setView(target.view);
+    setPlayerExpanded(false);
+    requestAnimationFrame(() => window.scrollTo(0, target.scroll));
+  };
+  const browse = (tab: Tab) =>
+    navigate({ page: "library", tab, playlistId: null });
+  const openPlaylist = (id: string) =>
+    navigate({ page: "library", tab: "playlists", playlistId: id });
+  const openCollection = (collection: MusicCollection) =>
+    navigate({
+      page: "library",
+      tab: collection.kind === "album" ? "albums" : "artists",
+      collection: { kind: collection.kind, id: collection.id },
+    });
+  const newPlaylist = () => {
+    navigate({ page: "library", tab: "playlists", playlistId: null });
+    setCreateSignal((value) => value + 1);
+  };
+  const play = (queue: Song[], name: string, startId?: string) => {
+    if (!queue.some((song) => videoId(song.video))) return;
+    setRequest((previous) => ({
+      key: (previous?.key || 0) + 1,
+      songs: queue,
+      name,
+      startId,
+    }));
+  };
+  const addToList = (selected: Song[]) => {
+    setAddError("");
+    setListQuery("");
+    setAddingSongs(selected);
+  };
+  const saveAdd = async (list?: Playlist) => {
+    setAdding(true);
+    setAddError("");
+    try {
+      const ids = addingSongs.map((song) => song.id);
+      if (list)
+        await api.updatePlaylist({
+          ...list,
+          song_ids: [...new Set([...(list.song_ids || []), ...ids])],
+        });
+      else
+        await api.createPlaylist({
+          name: addName.trim(),
+          type: "manual",
+          song_ids: ids,
+        });
+      setNotice(`Tillagt i ${list?.name || addName.trim()}`);
+      setAddingSongs([]);
+      setAddName("");
+      await loadPlaylists();
+    } catch (caught) {
+      setAddError((caught as Error).message);
+    } finally {
+      setAdding(false);
+    }
+  };
+  const fields = useMemo(
+    () => Object.keys(schema?.items.properties || {}),
+    [schema],
+  );
+  const artists = useMemo(() => artistCollections(songs), [songs]);
+  const albums = useMemo(() => albumCollections(songs), [songs]);
+  const collection = (
+    view.collection?.kind === "artist" ? artists : albums
+  ).find((item) => item.id === view.collection?.id);
+  const facets = useMemo(
+    () =>
+      Object.fromEntries(
+        filterKeys.map((key) => [
+          key,
+          [...new Set(songs.flatMap((song) => values(song, key)))].sort(
+            (a, b) => a.localeCompare(b, "sv"),
+          ),
+        ]),
+      ),
+    [songs],
+  );
+  const result = useMemo(() => {
+    try {
+      const found = searchSongs(
+        songs,
+        view.page === "search" ? query : "",
+        fields,
+      ).filter((song) =>
+        Object.entries(filters).every(
+          ([key, selected]) =>
+            !selected.length ||
+            selected.some((value) =>
+              values(song, key as keyof Song).includes(value),
+            ),
+        ),
+      );
+      return {
+        songs: [...found].sort((a, b) =>
+          sort === "year"
+            ? (b.year || 0) - (a.year || 0)
+            : String(a[sort as keyof Song] || "").localeCompare(
+                String(b[sort as keyof Song] || ""),
+                "sv",
+              ),
+        ),
+        error: "",
+      };
+    } catch (caught) {
+      return { songs: [], error: (caught as Error).message };
+    }
+  }, [songs, fields, query, filters, sort, view.page]);
+  const visibleArtists =
+    view.page === "search" ? artistCollections(result.songs) : artists;
+  const visibleAlbums =
+    view.page === "search" ? albumCollections(result.songs) : albums;
+  const matchingPlaylists = playlists.filter((list) =>
+    `${list.name} ${list.description || ""}`
+      .toLocaleLowerCase("sv")
+      .includes(query.trim().toLocaleLowerCase("sv")),
+  );
+  const activeFilters = Object.values(filters).reduce(
+    (count, selected) => count + selected.length,
+    0,
+  );
+  const resolve = (list: Playlist) => {
+    try {
+      return resolvePlaylist(list, songs, fields);
+    } catch {
+      return [];
+    }
+  };
+  const openArtist = (name: string) => {
+    const id = name
+      .normalize("NFKC")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLocaleLowerCase("sv");
+    const artist = artists.find((item) => item.id === id);
+    if (artist) openCollection(artist);
+  };
+  const openAlbum = (song: Song) => {
+    const album = albums.find((item) => item.id === collectionForAlbum(song));
+    if (album) openCollection(album);
+  };
+  const tableProps = {
+    onOpen: setSelectedSong,
+    onAdd: addToList,
+    currentSongId: currentSong?.id,
+    onArtist: openArtist,
+    onAlbum: openAlbum,
+  };
+  const activeTab = view.tab;
+  const collectionGrid = (items: MusicCollection[]) => (
+    <div className="collection-grid">
+      {items.map((item) => (
+        <CollectionCard
+          key={item.id}
+          collection={item}
+          onOpen={() => openCollection(item)}
+          onPlay={() => play(item.songs, item.name)}
+        />
+      ))}
+    </div>
+  );
+
+  const libraryTabs = (
+    <div
+      className="browse-tabs"
+      role="tablist"
+      aria-label="Visa biblioteket"
+      onKeyDown={(event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+          return;
+        event.preventDefault();
+        const buttons = [
+          ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
+            '[role="tab"]',
+          ),
+        ];
+        const index = buttons.indexOf(
+          document.activeElement as HTMLButtonElement,
+        );
+        const next =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? buttons.length - 1
+              : (index +
+                  (event.key === "ArrowRight" ? 1 : -1) +
+                  buttons.length) %
+                buttons.length;
+        buttons[next]?.click();
+        requestAnimationFrame(() => {
+          const active = [
+            ...document.querySelectorAll<HTMLButtonElement>(
+              '[role="tab"][aria-selected="true"]',
+            ),
+          ].find((button) => button.getClientRects().length > 0);
+          active?.focus();
+        });
+      }}
+    >
+      {tabs.map(([tab, label]) => (
+        <button
+          key={tab}
+          role="tab"
+          tabIndex={activeTab === tab ? 0 : -1}
+          aria-selected={activeTab === tab}
+          className={activeTab === tab ? "active" : ""}
+          onClick={() => navigate({ page: view.page, tab })}
+        >
+          {label}
+          <span>
+            {tab === "songs"
+              ? result.songs.length
+              : tab === "artists"
+                ? visibleArtists.length
+                : tab === "albums"
+                  ? visibleAlbums.length
+                  : view.page === "search"
+                    ? matchingPlaylists.length
+                    : playlists.length}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+
+  if (loading)
+    return (
+      <main className="loading-state" role="status">
+        <Music2 />
+        <p>Laddar ditt visarkiv…</p>
+      </main>
+    );
+  if (!schema || error)
+    return (
+      <main className="empty-state fatal">
+        <h1>Visarkivet kunde inte laddas</h1>
+        <pre>{error}</pre>
+        <button className="primary-action" onClick={loadCatalog}>
+          <RefreshCw /> Försök igen
+        </button>
+      </main>
+    );
+  return (
+    <div
+      className={`app-shell ${request ? "has-player" : ""} ${playerExpanded ? "player-is-expanded" : ""}`}
+    >
+      <aside className="sidebar">
+        <button
+          className="brand"
+          onClick={() => navigate({ page: "home", tab: "songs" })}
+        >
+          <span>
+            <Music2 />
+          </span>
+          <strong>
+            visor<span>Ditt eget soundtrack</span>
+          </strong>
+        </button>
+        <nav aria-label="Huvudnavigation" className="desktop-navigation">
+          <button
+            className={view.page === "home" ? "active" : ""}
+            aria-current={view.page === "home" ? "page" : undefined}
+            onClick={() => navigate({ page: "home", tab: "songs" })}
+          >
+            <Home /> Hem
+          </button>
+          <button
+            className={view.page === "search" ? "active" : ""}
+            aria-current={view.page === "search" ? "page" : undefined}
+            onClick={() => {
+              navigate({ page: "search", tab: "songs" });
+              searchInput.current?.focus();
+            }}
+          >
+            <Search /> Sök
+          </button>
+        </nav>
+        <div className="sidebar-library-head">
+          <button onClick={() => browse("playlists")}>
+            <Library /> Ditt bibliotek
+          </button>
+          <button
+            className="icon-button"
+            aria-label="Skapa spellista"
+            onClick={newPlaylist}
+          >
+            <Plus />
+          </button>
+        </div>
+        <div className="sidebar-chips">
+          <button
+            onClick={() => browse("playlists")}
+            className={
+              view.page === "library" && activeTab === "playlists"
+                ? "active"
+                : ""
+            }
+          >
+            Spellistor
+          </button>
+          <button
+            onClick={() => browse("artists")}
+            className={
+              view.page === "library" && activeTab === "artists" ? "active" : ""
+            }
+          >
+            Artister
+          </button>
+          <button
+            onClick={() => browse("albums")}
+            className={
+              view.page === "library" && activeTab === "albums" ? "active" : ""
+            }
+          >
+            Album
+          </button>
+        </div>
+        <div className="sidebar-lists">
+          <button
+            className={`sidebar-list ${view.page === "library" && activeTab === "songs" ? "active" : ""}`}
+            onClick={() => browse("songs")}
+          >
+            <Artwork title="Alla låtar" size="small" />
+            <span>
+              <strong>Alla låtar</strong>
+              <small>{songs.length} låtar i ditt arkiv</small>
+            </span>
+          </button>
+          {playlists.map((list) => (
+            <button
+              key={list.id}
+              className={`sidebar-list ${view.playlistId === list.id && view.page === "library" ? "active" : ""}`}
+              onClick={() => openPlaylist(list.id)}
+            >
+              <Artwork title={list.name} kind="playlist" size="small" />
+              <span>
+                <strong>{list.name}</strong>
+                <small>
+                  {list.type === "dynamic" ? "Sparad sökning" : "Spellista"} ·{" "}
+                  {resolve(list).length} låtar
+                </small>
+              </span>
+            </button>
+          ))}
+          {!playlists.length && (
+            <div className="sidebar-empty">
+              <p>Samla dina favoriter.</p>
+              <button className="secondary-action" onClick={newPlaylist}>
+                <Plus /> Skapa spellista
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="sidebar-footer">
+          <Music2 />
+          <span>Musik, text & ackord</span>
+        </div>
+      </aside>
+      <div className="main-shell" hidden={playerExpanded}>
+        <header className="topbar">
+          <div className="history-controls">
+            <button
+              className="icon-button"
+              onClick={() => travel(-1)}
+              disabled={!past.length}
+              aria-label="Tillbaka"
+            >
+              <ArrowLeft />
+            </button>
+            <button
+              className="icon-button"
+              onClick={() => travel(1)}
+              disabled={!future.length}
+              aria-label="Framåt"
+            >
+              <ArrowRight />
+            </button>
+          </div>
+          <label className="search-box global-search">
+            <Search />
+            <input
+              ref={searchInput}
+              type="search"
+              aria-label="Sök i hela biblioteket"
+              placeholder="Vad vill du lyssna på?"
+              value={query}
+              onFocus={() => {
+                if (view.page !== "search")
+                  navigate({ page: "search", tab: "songs" });
+              }}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {query && (
+              <button
+                className="icon-button"
+                onClick={() => {
+                  setQuery("");
+                  searchInput.current?.focus();
+                }}
+                aria-label="Rensa sökning"
+              >
+                <X />
+              </button>
+            )}
+          </label>
+          <span className="topbar-label">VISARKIVET</span>
+        </header>
+        <main className="main-content" id="main-content">
+          {playlistError && (
+            <div className="inline-error" role="alert">
+              <span>Spellistorna kunde inte laddas. {playlistError}</span>
+              <button
+                onClick={() => void loadPlaylists().catch(() => undefined)}
+              >
+                Försök igen
+              </button>
+            </div>
+          )}
+          <div hidden={view.page !== "home"} className="home-view">
+            <div className="browse-chips" aria-label="Bläddra i biblioteket">
+              {tabs.map(([tab, label, Icon]) => (
+                <button key={tab} onClick={() => browse(tab)}>
+                  <Icon />
+                  {label}
+                </button>
+              ))}
+            </div>
+            <section className="home-feature">
+              <div>
+                <span className="eyebrow">DITT VISARKIV</span>
+                <h1>Musik att återvända till.</h1>
+                <p>
+                  Alla dina låtar, texter och ackord.
+                  <br />
+                  Hitta en favorit och låt nästa ta vid.
+                </p>
+                <button
+                  className="primary-action"
+                  onClick={() => play(songs, "Alla låtar")}
+                  disabled={!songs.some((song) => videoId(song.video))}
+                >
+                  <Play fill="currentColor" /> Spela från arkivet
+                </button>
+              </div>
+              <div className="hero-record" aria-hidden="true">
+                <div>
+                  <Music2 />
+                </div>
+              </div>
+            </section>
+            {!!playlists.length && (
+              <section className="home-section">
+                <header className="section-heading">
+                  <h2>Dina spellistor</h2>
+                  <button
+                    className="text-action"
+                    onClick={() => browse("playlists")}
+                  >
+                    Visa alla <ArrowRight />
+                  </button>
+                </header>
+                <div className="quick-playlists">
+                  {playlists.slice(0, 6).map((list) => (
+                    <button key={list.id} onClick={() => openPlaylist(list.id)}>
+                      <Artwork title={list.name} kind="playlist" />
+                      <span>{list.name}</span>
+                      <ArrowRight />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+            <section className="home-section">
+              <header className="section-heading">
+                <div>
+                  <h2>Från ditt arkiv</h2>
+                  <p>En låt för varje stund.</p>
+                </div>
+                <button className="text-action" onClick={() => browse("songs")}>
+                  Alla låtar <ArrowRight />
+                </button>
+              </header>
+              <div className="song-shelf">
+                {songs.slice(0, 6).map((song) => (
+                  <article className="collection-card" key={song.id}>
+                    <button
+                      className="collection-open"
+                      onClick={() => setSelectedSong(song)}
+                    >
+                      <Artwork title={song.title} />
+                      <h3>{song.title}</h3>
+                      <p>{songCredit(song)}</p>
+                    </button>
+                    <button
+                      className="card-play"
+                      disabled={!videoId(song.video)}
+                      aria-label={`Spela ${song.title}`}
+                      onClick={() => play(songs, "Alla låtar", song.id)}
+                    >
+                      <Play fill="currentColor" />
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
+            {!!artists.length && (
+              <section className="home-section">
+                <header className="section-heading">
+                  <h2>Artister i biblioteket</h2>
+                  <button
+                    className="text-action"
+                    onClick={() => browse("artists")}
+                  >
+                    Visa alla <ArrowRight />
+                  </button>
+                </header>
+                {collectionGrid(artists.slice(0, 5))}
+              </section>
+            )}
+          </div>
+          <div
+            hidden={
+              view.page === "home" ||
+              (activeTab === "playlists" && view.page === "library")
+            }
+            className="browse-view"
+          >
+            {collection ? (
+              <>
+                <button
+                  className="text-action back-to-collection"
+                  onClick={() =>
+                    browse(collection.kind === "album" ? "albums" : "artists")
+                  }
+                >
+                  <ArrowLeft />{" "}
+                  {collection.kind === "album" ? "Alla album" : "Alla artister"}
+                </button>
+                <header className={`collection-hero ${collection.kind}-hero`}>
+                  <Artwork
+                    title={collection.name}
+                    kind={collection.kind}
+                    size="large"
+                  />
+                  <div>
+                    <span className="eyebrow">
+                      {collection.kind === "album" ? "Album" : "Artist"}
+                    </span>
+                    <h1>{collection.name}</h1>
+                    <p>
+                      {collection.kind === "album" && (
+                        <>{collection.subtitle} · </>
+                      )}
+                      {collection.songs.length} låtar
+                    </p>
+                  </div>
+                </header>
+                <div className="collection-actions">
+                  <button
+                    className="primary-action"
+                    disabled={
+                      !collection.songs.some((song) => videoId(song.video))
+                    }
+                    onClick={() => play(collection.songs, collection.name)}
+                  >
+                    <Play fill="currentColor" /> Spela
+                  </button>
+                  <button
+                    className="secondary-action"
+                    onClick={() => addToList(collection.songs)}
+                  >
+                    <Plus /> Lägg till i spellista
+                  </button>
+                </div>
+                <SongTable
+                  songs={collection.songs}
+                  onPlay={(song, queue) =>
+                    play(queue, collection.name, song.id)
+                  }
+                  {...tableProps}
+                />
+                {collection.kind === "artist" &&
+                  !!albums.filter((album) =>
+                    album.songs.some((song) =>
+                      collection.songs.some((track) => track.id === song.id),
+                    ),
+                  ).length && (
+                    <section className="home-section">
+                      <h2>Album</h2>
+                      {collectionGrid(
+                        albums.filter((album) =>
+                          album.songs.some((song) =>
+                            collection.songs.some(
+                              (track) => track.id === song.id,
+                            ),
+                          ),
+                        ),
+                      )}
+                    </section>
+                  )}
+              </>
+            ) : (
+              <>
+                <header className="page-heading">
+                  <div>
+                    <span className="eyebrow">
+                      {view.page === "search"
+                        ? "Hitta din nästa låt"
+                        : "Din musik, samlad"}
+                    </span>
+                    <h1>
+                      {view.page === "search"
+                        ? query
+                          ? `Resultat för ”${query}”`
+                          : "Sök & upptäck"
+                        : "Ditt bibliotek"}
+                    </h1>
+                  </div>
+                  {view.page === "library" && (
+                    <button className="secondary-action" onClick={newPlaylist}>
+                      <Plus /> Ny spellista
+                    </button>
+                  )}
+                </header>
+                {libraryTabs}
+                {result.error && (
+                  <div className="inline-error" role="alert">
+                    Ogiltig sökning: {result.error}
+                  </div>
+                )}
+                {activeTab === "songs" && (
+                  <>
+                    <div className="catalog-tools">
+                      <span>{result.songs.length} låtar</span>
+                      <button
+                        className={`secondary-action ${activeFilters ? "active" : ""}`}
+                        onClick={() => setFilterOpen(true)}
+                      >
+                        <SlidersHorizontal /> Filter{" "}
+                        {activeFilters > 0 && `(${activeFilters})`}
+                      </button>
+                      <label className="sort-control">
+                        <span className="sr-only">Sortera låtar</span>
+                        <select
+                          aria-label="Sortera låtar"
+                          value={sort}
+                          onChange={(event) => setSort(event.target.value)}
+                        >
+                          <option value="title">Titel</option>
+                          <option value="artist">Artist</option>
+                          <option value="year">Nyaste år först</option>
+                        </select>
+                      </label>
+                    </div>
+                    {activeFilters > 0 && (
+                      <div className="active-filters">
+                        {Object.entries(filters).flatMap(([field, entries]) =>
+                          entries.map((value) => (
+                            <button
+                              key={`${field}-${value}`}
+                              onClick={() =>
+                                setFilters((current) => ({
+                                  ...current,
+                                  [field]: current[field].filter(
+                                    (item) => item !== value,
+                                  ),
+                                }))
+                              }
+                            >
+                              {fieldLabel(field)}: {value}
+                              <X />
+                            </button>
+                          )),
+                        )}
+                        <button
+                          className="text-action"
+                          onClick={() => setFilters({})}
+                        >
+                          Rensa alla
+                        </button>
+                      </div>
+                    )}
+                    <SongTable
+                      songs={result.songs}
+                      onPlay={(song, queue) =>
+                        play(
+                          queue,
+                          view.page === "search" ? "Sökresultat" : "Alla låtar",
+                          song.id,
+                        )
+                      }
+                      selectable
+                      {...tableProps}
+                    />
+                  </>
+                )}
+                {activeTab === "playlists" &&
+                  view.page === "search" &&
+                  (matchingPlaylists.length ? (
+                    <div className="collection-grid">
+                      {matchingPlaylists.map((list) => (
+                        <article className="collection-card" key={list.id}>
+                          <button
+                            className="collection-open"
+                            onClick={() => openPlaylist(list.id)}
+                          >
+                            <Artwork title={list.name} kind="playlist" />
+                            <h3>{list.name}</h3>
+                            <p>{resolve(list).length} låtar</p>
+                          </button>
+                          <button
+                            className="card-play"
+                            disabled={
+                              !resolve(list).some((song) => videoId(song.video))
+                            }
+                            onClick={() => play(resolve(list), list.name)}
+                            aria-label={`Spela spellistan ${list.name}`}
+                          >
+                            <Play fill="currentColor" />
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <ListMusic />
+                      <h2>Inga matchande spellistor</h2>
+                      <p>Prova ett annat namn eller skapa en egen spellista.</p>
+                      <button
+                        className="secondary-action"
+                        onClick={newPlaylist}
+                      >
+                        <Plus /> Ny spellista
+                      </button>
+                    </div>
+                  ))}
+                {activeTab === "artists" &&
+                  (visibleArtists.length ? (
+                    collectionGrid(visibleArtists)
+                  ) : (
+                    <div className="empty-state">
+                      <UserRound />
+                      <h2>Inga artister att visa</h2>
+                      <p>Artister visas när de finns angivna på låtarna.</p>
+                    </div>
+                  ))}
+                {activeTab === "albums" &&
+                  (visibleAlbums.length ? (
+                    collectionGrid(visibleAlbums)
+                  ) : (
+                    <div className="empty-state album-empty">
+                      <Disc3 />
+                      <h2>
+                        {query && view.page === "search"
+                          ? "Inga matchande album"
+                          : "Dina album börjar här"}
+                      </h2>
+                      <p>
+                        {albums.length
+                          ? "Prova att söka på ett annat album eller en artist."
+                          : "Inga låtar har album angivet ännu. När album läggs till i låtinformationen samlas de här."}
+                      </p>
+                      <button
+                        className="secondary-action"
+                        onClick={() => browse("songs")}
+                      >
+                        Bläddra bland alla låtar
+                      </button>
+                    </div>
+                  ))}
+              </>
+            )}
+          </div>
+          <div hidden={view.page !== "library" || activeTab !== "playlists"}>
+            <Playlists
+              navigation={libraryTabs}
+              songs={songs}
+              schema={schema}
+              playlists={playlists}
+              reload={loadPlaylists}
+              selectedId={view.playlistId || null}
+              onSelect={(id) =>
+                navigate({ page: "library", tab: "playlists", playlistId: id })
+              }
+              createSignal={createSignal}
+              onPlay={play}
+              onOpen={setSelectedSong}
+              onAdd={addToList}
+              currentSongId={currentSong?.id}
+            />
+          </div>
+        </main>
+      </div>
+      {request && (
+        <Player
+          request={request}
+          expanded={playerExpanded}
+          onExpand={() => {
+            if (!playerExpanded) {
+              playerScroll.current = window.scrollY;
+              setPlayerExpanded(true);
+              window.scrollTo(0, 0);
+            }
+          }}
+          onClose={() => {
+            setRequest(undefined);
+            setCurrentSong(undefined);
+            setPlayerExpanded(false);
+          }}
+          onCollapse={() => {
+            setPlayerExpanded(false);
+            requestAnimationFrame(() =>
+              window.scrollTo(0, playerScroll.current),
+            );
+          }}
+          onAdd={(song) => addToList([song])}
+          onOpen={setSelectedSong}
+          onTrackChange={setCurrentSong}
+        />
+      )}
+      <nav className="mobile-navigation" aria-label="Mobilnavigation">
+        <button
+          aria-current={view.page === "home" ? "page" : undefined}
+          onClick={() => navigate({ page: "home", tab: "songs" })}
+        >
+          <Home />
+          <span>Hem</span>
+        </button>
+        <button
+          aria-current={view.page === "search" ? "page" : undefined}
+          onClick={() => {
+            navigate({ page: "search", tab: "songs" });
+            searchInput.current?.focus();
+          }}
+        >
+          <Search />
+          <span>Sök</span>
+        </button>
+        <button
+          aria-current={view.page === "library" ? "page" : undefined}
+          onClick={() => browse("playlists")}
+        >
+          <Library />
+          <span>Bibliotek</span>
+        </button>
+      </nav>
+      {filterOpen && (
+        <div className="modal-backdrop" onClick={() => setFilterOpen(false)}>
+          <section
+            className="filter-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filtrera låtar"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="dialog-heading">
+              <h2>Filtrera låtar</h2>
+              <button
+                className="icon-button"
+                onClick={() => setFilterOpen(false)}
+                aria-label="Stäng filter"
+              >
+                <X />
+              </button>
+            </header>
+            {filterKeys.map((field) => (
+              <details key={field} open={field === "artist"}>
+                <summary>
+                  {fieldLabel(field)}{" "}
+                  {filters[field]?.length ? `(${filters[field].length})` : ""}
+                </summary>
+                <div>
+                  {facets[field].map((value) => (
+                    <label className="check-control" key={value}>
+                      <input
+                        type="checkbox"
+                        checked={filters[field]?.includes(value) || false}
+                        onChange={() =>
+                          setFilters((current) => ({
+                            ...current,
+                            [field]: current[field]?.includes(value)
+                              ? current[field].filter((item) => item !== value)
+                              : [...(current[field] || []), value],
+                          }))
+                        }
+                      />
+                      {value}
+                    </label>
+                  ))}
+                  {!facets[field].length && (
+                    <p className="muted">Inga värden ännu.</p>
+                  )}
+                </div>
+              </details>
+            ))}
+            <footer>
+              <button
+                className="secondary-action"
+                onClick={() => setFilters({})}
+              >
+                Rensa filter
+              </button>
+              <button
+                className="primary-action"
+                onClick={() => setFilterOpen(false)}
+              >
+                Visa {result.songs.length} låtar
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+      {selectedSong && (
+        <SongDetail
+          song={selectedSong}
+          onClose={() => setSelectedSong(undefined)}
+          onPlay={() => play([selectedSong], selectedSong.title)}
+          onAdd={() => addToList([selectedSong])}
+        />
+      )}
+      {!!addingSongs.length && (
+        <div
+          className="modal-backdrop add-backdrop"
+          onClick={() => {
+            if (!adding) setAddingSongs([]);
+          }}
+        >
+          <section
+            className="add-playlist-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Lägg till i spellista"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="dialog-heading">
+              <div>
+                <h2>Lägg till i spellista</h2>
+                <p>
+                  {addingSongs.length === 1
+                    ? addingSongs[0].title
+                    : `${addingSongs.length} valda låtar`}
+                </p>
+              </div>
+              <button
+                disabled={adding}
+                className="icon-button"
+                onClick={() => setAddingSongs([])}
+                aria-label="Stäng spellisteval"
+              >
+                <X />
+              </button>
+            </header>
+            {addError && (
+              <p className="inline-error" role="alert">
+                {addError}
+              </p>
+            )}
+            <label className="search-box">
+              <Search />
+              <input
+                placeholder="Hitta en spellista"
+                aria-label="Hitta en spellista"
+                value={listQuery}
+                onChange={(event) => setListQuery(event.target.value)}
+              />
+            </label>
+            <div className="add-playlist-options">
+              {playlists
+                .filter(
+                  (list) =>
+                    list.type !== "dynamic" &&
+                    list.name
+                      .toLocaleLowerCase()
+                      .includes(listQuery.toLocaleLowerCase()),
+                )
+                .map((list) => (
+                  <button
+                    disabled={adding}
+                    key={list.id}
+                    onClick={() => saveAdd(list)}
+                  >
+                    <Artwork title={list.name} kind="playlist" size="small" />
+                    <span>
+                      <strong>{list.name}</strong>
+                      <small>{list.song_ids?.length || 0} låtar</small>
+                    </span>
+                    <Plus />
+                  </button>
+                ))}
+            </div>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (addName.trim() && !adding) void saveAdd();
+              }}
+            >
+              <label className="field">
+                <span>Ny spellista</span>
+                <input
+                  value={addName}
+                  onChange={(event) => setAddName(event.target.value)}
+                  placeholder="Ge spellistan ett namn"
+                />
+              </label>
+              <button
+                className="primary-action"
+                disabled={adding || !addName.trim()}
+                type="submit"
+              >
+                <Plus />
+                {adding ? "Sparar…" : "Skapa och lägg till"}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+      <div className="toast-region" role="status">
+        {notice && <div className="toast">{notice}</div>}
+      </div>
+    </div>
+  );
 }

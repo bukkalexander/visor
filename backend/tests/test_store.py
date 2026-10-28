@@ -21,6 +21,34 @@ class StoreTests(unittest.TestCase):
                 store.load_catalog()
             self.assertIn("schema", str(result.exception))
 
+    def test_catalog_accepts_existing_records_and_optional_album_metadata(self):
+        songs = [
+            {"id": "existing", "title": "Existing song", "lyrics": "Original lyrics"},
+            {"id": "album-only", "title": "Album song", "lyrics": "Original lyrics", "album": "My album"},
+            {"id": "ordered", "title": "Ordered song", "lyrics": "Original lyrics", "album": "My album", "track_number": 2},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "songs.yaml"
+            path.write_text(yaml.safe_dump(songs), encoding="utf-8")
+            with patch.object(store, "SONGS_FILE", path):
+                self.assertEqual(store.load_catalog()["songs"], songs)
+            self.assertEqual(yaml.safe_load(path.read_text(encoding="utf-8")), songs)
+
+    def test_catalog_accepts_empty_database_without_migration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "songs.yaml"
+            path.write_text("[]\n", encoding="utf-8")
+            with patch.object(store, "SONGS_FILE", path):
+                self.assertEqual(store.load_catalog()["songs"], [])
+
+    def test_catalog_rejects_invalid_album_metadata(self):
+        for metadata in [{"album": ""}, {"album": "   "}, {"album": ["Album"]}, {"track_number": 0}, {"track_number": 1.5}]:
+            with self.subTest(metadata=metadata), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "songs.yaml"
+                path.write_text(yaml.safe_dump([{"id": "invalid", "title": "Invalid", "lyrics": "Original lyrics", **metadata}]), encoding="utf-8")
+                with patch.object(store, "SONGS_FILE", path), self.assertRaises(store.CatalogError):
+                    store.load_catalog()
+
     def test_playlist_crud_uses_yaml(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "playlists.yaml"

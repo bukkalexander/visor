@@ -4,7 +4,7 @@
 
 - Swedish UI copy is the product default; code and technical documentation may be English.
 - Accessibility and touch ergonomics are requirements: semantic controls, visible focus, sufficient contrast, and 44px minimum targets.
-- Keep song metadata deliberately compact: title variants, description, lyrics, video, artist, author, composer, universe, tags, and year. Do not reintroduce language, source, or rights fields without a new iteration requiring them.
+- Keep song metadata deliberately compact: title variants, description, lyrics, video, artist, album with optional track number, author, composer, universe, tags, and year. Album metadata is explicit and optional; never infer it from universe or tags. Do not reintroduce language, source, or rights fields without a new iteration requiring them.
 - Keep media provenance explicit. Prefer links and user-owned uploads; do not invent attribution or embed copyrighted material.
 - Keep the app compatible with `PORT` and `ORC_BASE_PATH` as documented in `.orc/README.md`.
 

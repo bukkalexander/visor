@@ -21,7 +21,7 @@ run.sh           Prepared production service entry point
 
 The API reads and validates the song file for every catalogue request, so editing `songs.yaml` only requires a browser reload. The file is a flat YAML list—each top-level `-` starts a song. Invalid YAML or schema violations are displayed in the app with paths and validation messages. Every song needs `id` and `title`, plus at least one of `video` or `lyrics`.
 
-The intentionally small metadata model contains titles, description, lyrics, video, artist, author, composer, universe, tags, and year. Language, source, and rights are deliberately omitted.
+The intentionally small metadata model contains titles, description, lyrics, video, artist, author, composer, universe, tags, and year. Genuine album metadata can optionally be supplied as `album` (a title) and `track_number` (a positive integer). Album browsing groups explicit album titles and artist credits, with numbered tracks first in album order; missing album metadata is never inferred from universe, tags, or song titles. Existing songs need no migration. Language, source, and rights are deliberately omitted.
 
 Lyrics may use Markdown. Chords use ChordPro's compact inline form and are rendered above the following word:
 

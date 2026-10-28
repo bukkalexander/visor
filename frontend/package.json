@@ -8,12 +8,15 @@
     "build": "tsc -b && vite build",
     "test": "vitest run"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
+    "@lab/react-components": "file:vendor/lab-react-components-0.1.1.tgz",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "react-markdown": "latest",
-    "lucide-react": "latest"
+    "react-markdown": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",

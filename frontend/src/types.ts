@@ -6,6 +6,8 @@ export type Song = {
   lyrics?: string;
   video?: string;
   artist?: string[];
+  album?: string;
+  track_number?: number;
   author?: string[];
   composer?: string[];
   universe?: string[];
@@ -13,6 +15,20 @@ export type Song = {
   year?: number;
 };
 
-export type Playlist = { id: string; name: string; description?: string; type?: 'manual' | 'dynamic'; song_ids?: string[]; query?: string };
-export type Schema = { items: { properties: Record<string, { type?: string | string[]; enum?: string[]; description?: string }> } };
-export type Page = 'library' | 'songs' | 'playlists' | 'player';
+export type Playlist = {
+  id: string;
+  name: string;
+  description?: string;
+  type?: "manual" | "dynamic";
+  song_ids?: string[];
+  query?: string;
+};
+export type Schema = {
+  items: {
+    properties: Record<
+      string,
+      { type?: string | string[]; enum?: string[]; description?: string }
+    >;
+  };
+};
+export type Page = "library" | "songs" | "playlists" | "player";
