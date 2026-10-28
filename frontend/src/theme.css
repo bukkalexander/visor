@@ -1,0 +1,86 @@
+/* Shared color contract. Copy into each app; do not import another checkout.
+ * Palette: Catppuccin Mocha — https://catppuccin.com/palette/#mocha
+ * See instructions/theme.md in the agents repository for palette changes.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Palette primitives: keep raw colors in this layer. */
+  --palette-rosewater: #f5e0dc;
+  --palette-flamingo: #f2cdcd;
+  --palette-pink: #f5c2e7;
+  --palette-mauve: #cba6f7;
+  --palette-red: #f38ba8;
+  --palette-maroon: #eba0ac;
+  --palette-peach: #fab387;
+  --palette-yellow: #f9e2af;
+  --palette-green: #a6e3a1;
+  --palette-teal: #94e2d5;
+  --palette-sky: #89dceb;
+  --palette-sapphire: #74c7ec;
+  --palette-blue: #89b4fa;
+  --palette-lavender: #b4befe;
+  --palette-text: #cdd6f4;
+  --palette-subtext1: #bac2de;
+  --palette-subtext0: #a6adc8;
+  --palette-overlay2: #9399b2;
+  --palette-overlay1: #7f849c;
+  --palette-overlay0: #6c7086;
+  --palette-surface2: #585b70;
+  --palette-surface1: #45475a;
+  --palette-surface0: #313244;
+  --palette-base: #1e1e2e;
+  --palette-mantle: #181825;
+  --palette-crust: #11111b;
+
+  /* Semantic roles: app styles consume these, never palette primitives. */
+  --bg: var(--palette-mantle);
+  --surface: var(--palette-base);
+  --surface-subtle: var(--palette-surface0);
+  --surface-raised: var(--palette-surface0);
+  --text: var(--palette-text);
+  --muted: var(--palette-subtext1);
+  --faint: var(--palette-subtext0);
+  --border: var(--palette-surface1);
+  --border-subtle: var(--palette-surface0);
+  --border-strong: var(--palette-overlay1);
+  --control-border: var(--palette-overlay0);
+  --accent: var(--palette-mauve);
+  --accent-hover: var(--palette-lavender);
+  --accent-text: var(--palette-crust);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  --accent-border: color-mix(in srgb, var(--accent) 55%, var(--surface));
+  --selection: color-mix(in srgb, var(--accent) 30%, var(--surface));
+  --focus: var(--palette-lavender);
+  --success: var(--palette-green);
+  --success-soft: color-mix(in srgb, var(--success) 14%, var(--surface));
+  --warning: var(--palette-yellow);
+  --warning-soft: color-mix(in srgb, var(--warning) 14%, var(--surface));
+  --danger: var(--palette-red);
+  --danger-soft: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  --danger-border: color-mix(in srgb, var(--danger) 55%, var(--surface));
+  --danger-hover: var(--palette-maroon);
+  --info: var(--palette-blue);
+  --info-soft: color-mix(in srgb, var(--info) 14%, var(--surface));
+  --task: var(--palette-teal);
+  --task-soft: color-mix(in srgb, var(--task) 14%, var(--surface));
+  --backdrop: color-mix(in srgb, var(--palette-crust) 72%, transparent);
+  --shadow-color: color-mix(in srgb, var(--palette-crust) 48%, transparent);
+  --shadow: 0 8px 24px var(--shadow-color);
+
+  /* Visor roles: artwork, media and instrument diagrams. */
+  --nav-background: color-mix(in srgb, var(--surface) 94%, transparent);
+  --media-background: var(--palette-crust);
+  --cover-background: var(--accent-soft);
+  --cover-text: var(--accent);
+  --cover-warm-background: var(--warning-soft);
+  --cover-warm-text: var(--warning);
+  --cover-cool-background: var(--info-soft);
+  --cover-cool-text: var(--info);
+  --piano-natural: var(--palette-text);
+  --piano-accidental: var(--palette-crust);
+  --piano-border: var(--palette-overlay0);
+  --piano-active: var(--accent);
+  --piano-accidental-active: var(--task);
+  --piano-active-outline: var(--palette-crust);
+}
